@@ -20,7 +20,7 @@
     <h2 class="heading">Not connected yet</h2>
     <p class="text-muted">Add <%= @settings.missing.to_sentence %> in <%= link_to "Settings › Google Ads", settings_google_ads_path, class: "link" %>.</p>
   </section>
-<% elsif @error %>
+<% elsif @error then %>
   <section class="panel panel--padded stack stack--sm">
     <h2 class="heading">Google Ads didn't answer</h2>
     <p class="text-danger"><%= @error %></p>
@@ -115,7 +115,7 @@
               <td class="data-table__num nowrap">
                 <% if term[:status].to_s.include?("EXCLUDED") %>
                   <span class="text-small text-muted">Excluded</span>
-                <% elsif can_write %>
+                <% elsif can_write then %>
                   <%= button_to "Exclude", google_ads_negative_keywords_path, params: {campaign_id: term[:campaign_id], keyword: term[:search_term], days: @days},
                         class: "btn btn--sm", form_class: "contents", data: {turbo_confirm: "Stop showing ads in “#{term[:campaign]}” to searches containing “#{term[:search_term]}”?"} %>
                 <% end %>

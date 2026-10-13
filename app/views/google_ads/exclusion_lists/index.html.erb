@@ -23,9 +23,9 @@
           <td class="text-small">
             <% if list.sync_error %>
               <span class="text-danger"><%= list.sync_error %></span>
-            <% elsif list.synced? %>
+            <% elsif list.synced? then %>
               <span class="badge badge--success">In sync</span> <%= time_ago_in_words(list.synced_at) %> ago
-            <% elsif list.shared_set_id %>
+            <% elsif list.shared_set_id then %>
               <span class="badge badge--warning">Changed since sync</span>
             <% else %>
               <span class="text-muted">Not synced</span>

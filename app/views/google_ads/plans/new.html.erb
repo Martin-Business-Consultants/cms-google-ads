@@ -9,7 +9,7 @@
   </div>
   <% if draft.working? %>
     <p class="notice notice--info text-small" role="status" data-controller="refresh" data-refresh-interval-value="5"><%= icon_tag "refresh" %> The AI is drafting the plan<%= ": #{draft.about}" if draft.about.present? %>. A minute or two; the form below fills in when it's in.</p>
-  <% elsif GoogleAds::Guide::Fill.available? %>
+  <% elsif GoogleAds::Guide::Fill.available? then %>
     <p class="text-small text-muted">The AI drafts the goal, what success looks like and when to stop, who it's for, the budget, when to decide and the setup, from everything answered in the strategy. Nothing is made until you save.</p>
     <%= form_with url: draft_google_ads_plans_path, class: "cluster cluster--sm" do |form| %>
       <%= form.text_field :about, value: draft.about, placeholder: "What it's for, if you know (optional): holiday displays for restaurants", class: "grow", aria: {label: "What the campaign is for"} %>

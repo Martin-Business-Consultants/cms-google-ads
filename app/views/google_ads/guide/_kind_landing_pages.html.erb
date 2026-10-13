@@ -1,24 +1,71 @@
 <%# locals: (guide:) %>
+<%# Each ad group's landing page: where it is, whether it's published, what the checks found, and building it with the AI from the site's own blocks, as a draft for a person to review and publish. %>
+<% can_build = Current.user.can?("google_ads:plan") && Current.user.can?("pages:write") %>
+<% ai = GoogleAds::LandingPageBuild.available? %>
 <section class="panel panel--padded stack stack--sm">
-  <h3 class="heading">Each ad group's page</h3>
-  <table class="data-table">
-    <tbody>
+  <div class="row row--between">
+    <h3 class="heading">Each ad group's page</h3>
+    <span class="text-small text-muted">Built from the site's own blocks, so it's on the theme</span>
+  </div>
+  <% if guide.plan.ad_groups.empty? %>
+    <p class="text-small text-muted">No ad groups yet: plan them in the Ad groups step first.</p>
+  <% else %>
+    <ul class="divided">
       <% guide.plan.ad_groups.each do |group| %>
         <%# herb:key group.id %>
+        <% build = GoogleAds::LandingPageBuild.new(group) %>
+        <% page = build.page %>
         <% problems = guide.checks.results.select { it[:area] == group.name && it[:message].start_with?("Landing page", "No landing page") } %>
-        <tr>
-          <td><strong><%= group.name %></strong></td>
-          <td><% if group.landing_path %><code><%= group.landing_path %></code><% end %></td>
-          <td>
-            <% if problems.any? %>
-              <span class="text-small text-danger"><%= problems.map { it[:message] }.to_sentence %></span>
-            <% else %>
-              <span class="badge badge--success">Published</span>
-            <% end %>
-          </td>
-        </tr>
+        <li class="stack stack--xs google-ads-landing">
+          <div class="row row--between">
+            <span class="stack stack--2xs">
+              <strong><%= group.name %></strong>
+              <span class="text-small text-muted">
+                <% if page %>
+                  <%= link_to "/#{(page.path == "home") ? "" : page.path}", edit_page_path(page.path), class: "link" %> · <%= page.title %>
+                <% elsif group.landing_path.present? then %>
+                  <code><%= group.landing_path %></code> · no page there yet
+                <% else %>
+                  No landing page chosen
+                <% end %>
+              </span>
+            </span>
+            <span class="cluster cluster--sm">
+              <% if page&.status == "published" %>
+                <span class="badge badge--success">Published</span>
+              <% elsif page then %>
+                <span class="badge badge--warning">Draft</span>
+              <% end %>
+              <% if build.working? %>
+                <span class="text-small text-muted" role="status" data-controller="refresh" data-refresh-interval-value="5"><%= icon_tag "refresh" %> Building…</span>
+              <% elsif can_build && ai && build.buildable? then %>
+                <%= button_to google_ads_plan_ad_group_landing_page_path(guide.plan, group), class: class_names("btn btn--sm", "btn--primary": page.nil?), form_class: "contents",
+                      data: (page ? {turbo_confirm: "Rebuild the draft “#{page.title}” with AI? Its blocks are replaced."} : nil) do %>
+                  <%= icon_tag "ai" %> <span><%= page ? "Rebuild with AI" : "Build it with AI" %></span>
+                <% end %>
+              <% end %>
+              <% if page && page.status != "published" %>
+                <%= link_to "Review and publish", edit_page_path(page.path), class: "btn btn--sm" %>
+              <% end %>
+            </span>
+          </div>
+          <% if build.error %>
+            <p class="notice notice--danger text-small" role="alert">The AI didn't build it: <%= build.error %></p>
+          <% elsif build.notes then %>
+            <div class="notice notice--info text-small stack stack--2xs">
+              <strong>Before you publish</strong>
+              <p class="google-ads-text"><%= build.notes %></p>
+            </div>
+          <% end %>
+          <% if problems.any? && !(page && page.status != "published") %>
+            <span class="text-small text-danger"><%= problems.map { it[:message] }.to_sentence %></span>
+          <% end %>
+        </li>
       <% end %>
-    </tbody>
-  </table>
-  <p class="text-small text-muted">Then, on a phone: does each page say what its ad says, is the form near the top, is there proof, is the phone number tappable? Submit the form once.</p>
+    </ul>
+    <% if can_build && !ai %>
+      <p class="text-small text-muted"><%= GoogleAds::Guide::Fill.unavailable_reason %>, to build the pages with AI.</p>
+    <% end %>
+  <% end %>
+  <p class="text-small text-muted">The AI writes each page from the ad group's keywords and ads, so it says what the ad said, with the form near the top, proof and one next step. It's a draft until you publish it. Then, on a phone: does each page say what its ad says, is the form near the top, is there proof, is the phone number tappable? Submit the form once.</p>
 </section>

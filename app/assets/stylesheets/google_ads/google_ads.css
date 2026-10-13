@@ -306,6 +306,11 @@
     border-inline-start: 3px solid var(--accent-600);
   }
 
+  /* The Landing pages step: an ad group a row, its page and what can be done about it. */
+  .google-ads-landing {
+    padding-block: var(--space-3);
+  }
+
   /* Plans › New: the AI's draft, above the form it fills. */
   .google-ads-draft {
     margin-block-end: var(--space-6);

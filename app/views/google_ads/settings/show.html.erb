@@ -64,7 +64,7 @@
   </div>
   <% if @settings.ready? %>
     <p class="text-small">Reading <strong><%= @settings.customer_name || @settings.customer_id %></strong>. <%= link_to "See the figures", google_ads_report_path, class: "link" %></p>
-  <% elsif @settings.missing.any? %>
+  <% elsif @settings.missing.any? then %>
     <p class="text-small text-muted">Still needed: <%= @settings.missing.to_sentence %>.</p>
   <% end %>
   <% if can_write %>

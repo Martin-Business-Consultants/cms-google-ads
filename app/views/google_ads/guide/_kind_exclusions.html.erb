@@ -16,7 +16,7 @@
       <div class="row row--between">
         <strong><%= list.name %> <span class="text-small text-muted">(<%= list.keyword_list.size %>)</span></strong>
         <span class="cluster cluster--sm text-small">
-          <% if list.synced? %><span class="badge badge--success">In Google Ads</span><% elsif list.shared_set_id %><span class="badge badge--warning">Changed since sync</span><% end %>
+          <% if list.synced? %><span class="badge badge--success">In Google Ads</span><% elsif list.shared_set_id then %><span class="badge badge--warning">Changed since sync</span><% end %>
           <% if can_plan %><%= link_to "Edit", edit_google_ads_exclusion_list_path(list, back: request.path), class: "link" %><% end %>
         </span>
       </div>

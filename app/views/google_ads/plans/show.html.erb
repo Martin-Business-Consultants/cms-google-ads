@@ -27,7 +27,7 @@
       <% end %>
       <% if @live&.campaign %>
         <span class="text-muted">Campaign: <%= @live.campaign[:name] %> (<%= @live.campaign[:status].to_s.humanize %>)</span>
-      <% elsif @plan.campaign_id.blank? %>
+      <% elsif @plan.campaign_id.blank? then %>
         <span class="text-muted">Not linked to a campaign yet</span>
       <% end %>
     </div>
@@ -117,7 +117,7 @@
                 <span class="google-ads-task__title"><%= task.title %></span>
                 <% if task.repeats %>
                   <span class="text-small text-muted"> · <%= task.repeats %><% if task.done_at %>, last done <%= time_ago_in_words(task.done_at) %> ago<%= " by #{task.done_by}" if task.done_by %><% end %></span>
-                <% elsif task.done? %>
+                <% elsif task.done? then %>
                   <span class="text-small text-muted"> · <%= time_ago_in_words(task.done_at) %> ago<%= " by #{task.done_by}" if task.done_by %></span>
                 <% end %>
                 <% if task.hint.present? %>

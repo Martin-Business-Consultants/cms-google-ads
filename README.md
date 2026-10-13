@@ -26,6 +26,13 @@ and the few changes worth making from here.
   before saving. Or copy the step's **research prompt for Claude**, run it in Claude with web search, and
   paste the reply back: the guide reads its JSON the same way, forgiving a reply wrapped in an outer object
   or keyed by the questions' labels. Agents do the same through the API.
+- **Landing pages built with AI** (a campaign's Landing pages step): for each ad group, **Build it with AI** composes
+  its landing page from the site's own block types (so it's on the theme), the way the site's pages are put
+  together, written from the ad group's keywords and ads so the page says what the ad said, with the form near
+  the top, proof and one next step. Each block is checked against its type (one that doesn't fit is left out,
+  and said); the page is made a **draft** at the ad group's landing path, with its meta title and description,
+  for a person to review and publish in the page editor. A draft can be rebuilt; a published page is never
+  touched. It takes `pages:write` and the AI plugin.
 - **Exclusion lists** (Google Ads › Exclusion lists): negative keywords kept once by theme, synced to Google
   Ads as shared negative keyword lists and attached to each plan's campaign. The guide warns when one would
   block what you sell or a plan's own keywords.

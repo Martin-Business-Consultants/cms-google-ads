@@ -36,7 +36,9 @@ module GoogleAds
               get :export, on: :member
               post :negatives, on: :member, action: :apply_negatives
               post :exclusions, on: :member, action: :attach_exclusions
-              resources :ad_groups, only: [:new, :create, :edit, :update, :destroy], controller: "plan_ad_groups"
+              resources :ad_groups, only: [:new, :create, :edit, :update, :destroy], controller: "plan_ad_groups" do
+                resource :landing_page, only: :create, controller: "landing_pages"
+              end
               resources :tasks, only: [:create, :update, :destroy], controller: "plan_tasks"
             end
           end

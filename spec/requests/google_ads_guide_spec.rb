@@ -170,6 +170,81 @@ RSpec.describe "Google Ads guide", type: :request do
     end
   end
 
+  describe "landing pages, built with AI from the site's blocks" do
+    let(:plan) { GoogleAds::Plan.create!(name: "Commercial", status: "planning", networks: "search") }
+    let!(:group) do
+      plan.ad_groups.create!(name: "Seasonal displays", landing_path: "/business-seasonal-displays", keywords: "\"commercial planters\"\n[storefront planters]",
+        headlines: "Seasonal Storefront Planters\nHoliday Displays for Businesses", descriptions: "Planters for storefronts, refreshed every season.")
+    end
+
+    before do
+      sign_in_as admin
+      BlockType.create!(slug: "hero", label: "Hero", category: "Sections", fields: [{"name" => "heading", "type" => "string", "required" => true},
+        {"name" => "subheading", "type" => "text"}, {"name" => "image_id", "type" => "asset"}])
+      BlockType.create!(slug: "faq", label: "FAQ", category: "Sections", fields: [{"name" => "heading", "type" => "string"},
+        {"name" => "items", "type" => "repeater", "of" => [{"name" => "question", "type" => "string"}, {"name" => "answer", "type" => "text"}]}])
+      BlockType.create!(slug: "form_section", label: "Form section", category: "Forms", fields: [{"name" => "form", "type" => "select", "options" => %w[contact quote]},
+        {"name" => "heading", "type" => "string"}])
+      BlockType.create!(slug: "photo", label: "Photo", category: "Media", fields: [{"name" => "asset_id", "type" => "asset", "required" => true}])
+      Page.create!(slug: "services", title: "Services", status: "published", locale: "en",
+        blocks: [{"type" => "hero", "version" => 1, "data" => {"heading" => "What we do"}}, {"type" => "faq", "version" => 1, "data" => {"heading" => "Questions"}}])
+      switch_plugin :ai, on: true
+      Ai::Settings.update("provider" => "opencode", "api_key" => "zen-key")
+    end
+
+    it "builds an ad group's page as a draft from the site's blocks, says what was left out, and never touches a published one" do
+      get google_ads_plan_guide_step_path(plan, "landing_pages")
+      expect(response.body).to include("Seasonal displays", "/business-seasonal-displays", "no page there yet", "Build it with AI")
+
+      asked = nil
+      allow(Ai).to receive(:structured) do |**options|
+        asked = options
+        {"title" => "Seasonal planters for businesses", "slug" => "seasonal-planters", "meta_title" => "Commercial planters | Healing Earth",
+         "meta_description" => "Seasonal storefront planters, designed and refreshed for you.", "notes" => "Add a photo of a storefront.",
+         "blocks" => [
+           {"type" => "hero", "data_json" => JSON.generate(heading: "Seasonal Storefront Planters", subheading: "Holiday displays for businesses", image_id: "made-up")},
+           {"type" => "form_section", "data_json" => JSON.generate(form: "quote", heading: "Get a quote")},
+           {"type" => "faq", "data_json" => JSON.generate(heading: "Questions", items: [{question: "Do you water them?", answer: "Yes, weekly."}])},
+           {"type" => "hero", "data_json" => JSON.generate(subheading: "No heading")},
+           {"type" => "carousel", "data_json" => "{}"}
+         ]}
+      end
+
+      expect { post google_ads_plan_ad_group_landing_page_path(plan, group) }.to have_enqueued_job(GoogleAds::LandingPageJob)
+      perform_enqueued_jobs
+      expect(asked[:schema][:properties][:blocks][:items][:properties][:type][:enum]).to contain_exactly("hero", "faq", "form_section")
+      expect(asked[:prompt]).to include("Seasonal Storefront Planters", "Keywords: commercial planters", "/services: hero → faq", "- form_section (Form section, Forms)")
+      expect(asked[:prompt]).not_to include("image_id")
+
+      page = Page.find_by!(path: "business-seasonal-displays")
+      expect(page).to have_attributes(status: "draft", title: "Seasonal planters for businesses")
+      expect(page.blocks.map { it["type"] }).to eq(%w[hero form_section faq])
+      expect(page.blocks.first["data"]).to eq("heading" => "Seasonal Storefront Planters", "subheading" => "Holiday displays for businesses")
+      expect(page.seo).to include("meta_title" => "Commercial planters | Healing Earth", "focus_keyword" => "commercial planters")
+      expect(group.reload.landing_path).to eq("/business-seasonal-displays")
+
+      get google_ads_plan_guide_step_path(plan, "landing_pages")
+      expect(response.body).to include("Draft", "Rebuild with AI", "Review and publish", "Add a photo of a storefront.", "Left out", "unknown type carousel")
+
+      page.update!(status: "published")
+      get google_ads_plan_guide_step_path(plan, "landing_pages")
+      expect(response.body).to include("Published")
+      expect(response.body).not_to include("Rebuild with AI")
+      post google_ads_plan_ad_group_landing_page_path(plan, group)
+      expect(flash[:alert]).to include("is published")
+    end
+
+    it "says why when the AI's blocks don't fit" do
+      allow(Ai).to receive(:structured).and_return("title" => "X", "slug" => "x", "meta_title" => "", "meta_description" => "", "notes" => "",
+        "blocks" => [{"type" => "hero", "data_json" => "not json"}])
+      post google_ads_plan_ad_group_landing_page_path(plan, group)
+      perform_enqueued_jobs
+      expect(Page.find_by(path: "business-seasonal-displays")).to be_nil
+      get google_ads_plan_guide_step_path(plan, "landing_pages")
+      expect(response.body).to include("None of the AI&#39;s blocks fit")
+    end
+  end
+
   describe "the API, for agents" do
     it "lists the steps, gives a step's prompt, applies an answer, and attaches exclusion lists to the campaign" do
       get "/api/google_ads/guide", headers: api_headers(admin)
