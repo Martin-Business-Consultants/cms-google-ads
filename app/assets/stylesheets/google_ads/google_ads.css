@@ -53,3 +53,153 @@
     min-height: 1px;
   }
 }
+
+/* Plans: the facts with their hints, the checks, the checklist, keyword chips and ad copy with its counts. */
+@layer components {
+  .google-ads-facts {
+    display: grid;
+    gap: var(--space-2) var(--space-4);
+    grid-template-columns: minmax(8rem, max-content) 1fr;
+  }
+
+  .google-ads-facts dt {
+    color: var(--gray-600);
+    font-weight: var(--weight-medium);
+  }
+
+  .google-ads-text {
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  .google-ads-hint summary {
+    color: var(--accent-600);
+    cursor: pointer;
+    font-size: var(--text-xs);
+  }
+
+  .google-ads-hint p {
+    background-color: var(--accent-50);
+    border-radius: var(--radius-lg);
+    margin-block-start: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .google-ads-checks,
+  .google-ads-tasks,
+  .google-ads-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .google-ads-checks li {
+    align-items: baseline;
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .google-ads-bar {
+    background-color: var(--gray-100);
+    border-radius: 999px;
+    height: 0.5rem;
+    overflow: hidden;
+  }
+
+  .google-ads-bar span {
+    background-color: var(--green-500);
+    display: block;
+    height: 100%;
+    width: var(--w);
+  }
+
+  .google-ads-phase {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
+  .google-ads-task {
+    align-items: flex-start;
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .google-ads-task__box {
+    align-items: center;
+    background: none;
+    border: 1.5px solid var(--gray-400);
+    border-radius: 4px;
+    color: var(--green-500);
+    cursor: pointer;
+    display: inline-flex;
+    flex: none;
+    height: 1.25rem;
+    justify-content: center;
+    margin-block-start: 0.1rem;
+    padding: 0;
+    width: 1.25rem;
+  }
+
+  .google-ads-task--done .google-ads-task__box {
+    border-color: var(--green-500);
+  }
+
+  .google-ads-task__body {
+    flex: 1;
+  }
+
+  .google-ads-task--done .google-ads-task__title {
+    color: var(--gray-600);
+    text-decoration: line-through;
+  }
+
+  .google-ads-label {
+    color: var(--gray-600);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+  }
+
+  .google-ads-chip {
+    background-color: var(--gray-100);
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    padding: 0.1rem var(--space-2);
+  }
+
+  .google-ads-chip--broad,
+  .google-ads-chip--pending {
+    background-color: var(--yellow-50, var(--accent-50));
+    outline: 1px dashed var(--yellow-500, var(--accent-600));
+  }
+
+  .google-ads-copy li {
+    display: flex;
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+    justify-content: space-between;
+  }
+
+  .google-ads-count {
+    color: var(--gray-400);
+    flex: none;
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .google-ads-count--over {
+    color: var(--red-500);
+    font-weight: var(--weight-semibold);
+  }
+
+  .google-ads-mono {
+    font-family: ui-monospace, monospace;
+    font-size: var(--text-sm);
+  }
+
+  .google-ads-add {
+    margin-block-start: var(--space-2);
+  }
+}

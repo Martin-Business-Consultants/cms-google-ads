@@ -1,0 +1,3 @@
+<% @page_title = @ad_group.name %>
+<%= render "layouts/shared/page_header", title: "#{@ad_group.name} · #{@plan.name}" %>
+<%= render "google_ads/plan_ad_groups/form", plan: @plan, ad_group: @ad_group %>

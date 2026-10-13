@@ -1,0 +1,37 @@
+<% @page_title = "Campaign plans" %>
+<% content_for :page_actions do %>
+  <%= link_to "Figures", google_ads_report_path, class: "btn" %>
+  <% if Current.user.can?("google_ads:plan") %>
+    <%= link_to "New plan", new_google_ads_plan_path, class: "btn btn--primary" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Campaign plans" %>
+
+<% if @plans.empty? %>
+  <section class="panel panel--padded stack stack--sm">
+    <h2 class="heading">Plan before you spend</h2>
+    <p class="text-muted">A plan says what a campaign is for and when you'll decide whether it worked, sets it up the way that keeps a small budget on the right searches, and walks you through a checklist from research to that decision, with a hint for every step. It checks your keywords, landing pages and ad copy as you go, and once the campaign is live, checks the campaign against the plan.</p>
+    <% if Current.user.can?("google_ads:plan") %>
+      <div><%= link_to "Make the first plan", new_google_ads_plan_path, class: "btn btn--primary" %></div>
+    <% end %>
+  </section>
+<% else %>
+  <section class="panel panel--scroll">
+    <table class="data-table">
+      <thead><tr><th>Plan</th><th>Status</th><th class="data-table__num">Budget a day</th><th>Decide by</th><th>Checklist</th></tr></thead>
+      <tbody>
+        <% @plans.each do |plan| %>
+          <%# herb:key plan.id %>
+          <% progress = plan.progress %>
+          <tr>
+            <td><%= link_to plan.name, google_ads_plan_path(plan), class: "link" %><% if plan.goal.present? %><div class="text-small text-muted"><%= plan.goal.truncate(90) %></div><% end %></td>
+            <td><%= status_tag plan.status_label %></td>
+            <td class="data-table__num"><%= plan.daily_budget ? number_to_currency(plan.daily_budget) : "–" %></td>
+            <td class="nowrap"><%= plan.decision_on ? l(plan.decision_on, format: :long) : "–" %></td>
+            <td class="nowrap"><%= progress[:done] %> of <%= progress[:total] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% end %>

@@ -1,0 +1,246 @@
+<% @page_title = @plan.name %>
+<% can_plan = Current.user.can?("google_ads:plan") %>
+<% can_write = Current.user.can?("google_ads:write") %>
+<% hints = GoogleAds::PlanTemplate::HINTS %>
+<% results = @checks.results %>
+<% badges = {"problem" => ["badge badge--danger", "Fix"], "warning" => ["badge badge--warning", "Check"], "ok" => ["badge badge--success", "Ready"]} %>
+<% match_marks = {"EXACT" => ["[", "]"], "PHRASE" => ["\"", "\""], "BROAD" => ["", ""]} %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Download for Ads Editor", export_google_ads_plan_path(@plan), class: "btn", data: {turbo: false} %>
+  <% if can_plan %>
+    <%= link_to "Edit", edit_google_ads_plan_path(@plan), class: "btn" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @plan.name %>
+
+<div class="stack stack--lg">
+  <section class="panel panel--padded stack stack--sm">
+    <div class="cluster cluster--sm text-small">
+      <%= status_tag @plan.status_label %>
+      <span><strong><%= @plan.daily_budget ? number_to_currency(@plan.daily_budget) : "No budget" %></strong><% if @plan.daily_budget %> a day, about <%= number_to_currency(@plan.monthly_budget, precision: 0) %> a month<% end %></span>
+      <% if @plan.starts_on %><span class="text-muted">Starts <%= l(@plan.starts_on, format: :long) %></span><% end %>
+      <% if @plan.decision_on %>
+        <% days = @plan.days_to_decision %>
+        <span class="<%= (days <= 7) ? "text-danger" : "text-muted" %>">Decide by <%= l(@plan.decision_on, format: :long) %> (<%= (days >= 0) ? "#{days} days to go" : "#{-days} days ago" %>)</span>
+      <% end %>
+      <% if @live&.campaign %>
+        <span class="text-muted">Campaign: <%= @live.campaign[:name] %> (<%= @live.campaign[:status].to_s.humanize %>)</span>
+      <% elsif @plan.campaign_id.blank? %>
+        <span class="text-muted">Not linked to a campaign yet</span>
+      <% end %>
+    </div>
+    <dl class="google-ads-facts text-small">
+      <% [["Goal", @plan.goal, :goal], ["Success, and when to stop", @plan.success, :success], ["Who it's for", @plan.audience, :audience],
+          ["Locations", @plan.locations, :locations], ["Schedule", @plan.schedule, :schedule], ["Networks", @plan.networks_label, :networks],
+          ["Bidding", @plan.bidding, :bidding], ["Final URL suffix", @plan.final_url_suffix, :final_url_suffix]].each do |label, value, key| %>
+        <%# herb:key key %>
+        <dt><%= label %></dt>
+        <dd>
+          <% if value.present? %>
+            <span class="google-ads-text"><%= value %></span>
+          <% else %>
+            <span class="text-muted">Not yet.</span>
+          <% end %>
+          <details class="google-ads-hint"><summary>Why</summary><p><%= hints[key] %></p></details>
+        </dd>
+      <% end %>
+    </dl>
+  </section>
+
+  <section class="panel panel--padded stack stack--sm" id="checks">
+    <div class="row row--between">
+      <h2 class="heading">Checks</h2>
+      <span class="text-small text-muted"><%= pluralize(@checks.problems, "thing") %> to fix, <%= pluralize(@checks.warnings, "to check", plural: "to check") %></span>
+    </div>
+    <ul class="google-ads-checks" role="list">
+      <% results.each_with_index do |check, index| %>
+        <%# herb:key index %>
+        <li>
+          <span class="<%= badges[check[:level]][0] %>"><%= badges[check[:level]][1] %></span>
+          <span class="text-small"><strong><%= check[:area] %></strong> · <%= check[:message] %></span>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <section class="panel panel--padded stack stack--md" id="checklist">
+    <% progress = @plan.progress %>
+    <div class="row row--between">
+      <h2 class="heading">Checklist</h2>
+      <span class="text-small text-muted"><%= progress[:done] %> of <%= progress[:total] %> done, and the repeating ones below</span>
+    </div>
+    <div class="google-ads-bar" role="progressbar" aria-valuemin="0" aria-valuemax="<%= progress[:total] %>" aria-valuenow="<%= progress[:done] %>">
+      <span style="--w: <%= progress[:total].positive? ? (progress[:done] * 100 / progress[:total]) : 0 %>%"></span>
+    </div>
+    <% tasks = @plan.tasks.group_by(&:phase) %>
+    <% GoogleAds::PlanTemplate::PHASES.each do |phase, title| %>
+      <%# herb:key phase %>
+      <% next if tasks[phase].blank? %>
+      <div class="stack stack--xs" id="phase-<%= phase %>">
+        <h3 class="google-ads-phase"><%= title %> <span class="text-muted">(<%= tasks[phase].count(&:done?) %>/<%= tasks[phase].size %>)</span></h3>
+        <ul class="google-ads-tasks" role="list">
+          <% tasks[phase].each do |task| %>
+            <%# herb:key task.id %>
+            <li class="google-ads-task <%= "google-ads-task--done" if task.done? %>">
+              <% if can_plan %>
+                <%= button_to google_ads_plan_task_path(@plan, task), method: :patch, class: "google-ads-task__box", form_class: "contents",
+                      aria: {label: task.done? ? "Mark “#{task.title}” not done" : "Mark “#{task.title}” done", pressed: task.done?} do %>
+                  <%= icon_tag("check", class: "icon--sm") if task.done? %>
+                <% end %>
+              <% else %>
+                <span class="google-ads-task__box"><%= icon_tag("check", class: "icon--sm") if task.done? %></span>
+              <% end %>
+              <div class="google-ads-task__body">
+                <span class="google-ads-task__title"><%= task.title %></span>
+                <% if task.repeats %>
+                  <span class="text-small text-muted"> · <%= task.repeats %><% if task.done_at %>, last done <%= time_ago_in_words(task.done_at) %> ago<%= " by #{task.done_by}" if task.done_by %><% end %></span>
+                <% elsif task.done? %>
+                  <span class="text-small text-muted"> · <%= time_ago_in_words(task.done_at) %> ago<%= " by #{task.done_by}" if task.done_by %></span>
+                <% end %>
+                <% if task.hint.present? %>
+                  <p class="text-small text-muted"><%= task.hint %></p>
+                <% end %>
+              </div>
+              <% if can_plan %>
+                <%= button_to "Remove", google_ads_plan_task_path(@plan, task), method: :delete, class: "btn btn--plain btn--sm", form_class: "contents",
+                      data: {turbo_confirm: "Remove “#{task.title}” from the checklist?"} %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+    <% if can_plan %>
+      <details>
+        <summary class="text-small link">Add a task</summary>
+        <%= form_with url: google_ads_plan_tasks_path(@plan), scope: :task, class: "stack stack--sm google-ads-add" do |form| %>
+          <div class="grid grid--2 fields-grid">
+            <%= settings_field "Task" do %>
+              <%= form.text_field :title, required: true %>
+            <% end %>
+            <%= settings_field "Phase" do %>
+              <%= form.select :phase, GoogleAds::PlanTemplate::PHASES.invert %>
+            <% end %>
+            <%= settings_field "Repeats" do %>
+              <%= form.select :repeats, [["Once", ""], ["Weekly", "weekly"], ["Monthly", "monthly"]] %>
+            <% end %>
+            <%= settings_field "How, or why" do %>
+              <%= form.text_field :hint %>
+            <% end %>
+          </div>
+          <div><button type="submit" class="btn">Add</button></div>
+        <% end %>
+      </details>
+    <% end %>
+  </section>
+
+  <section class="stack stack--sm" id="ad-groups">
+    <div class="row row--between">
+      <h2 class="heading">Ad groups</h2>
+      <% if can_plan %>
+        <%= link_to "Add ad group", new_google_ads_plan_ad_group_path(@plan), class: "btn btn--sm" %>
+      <% end %>
+    </div>
+    <% if @plan.ad_groups.empty? %>
+      <p class="panel panel--padded text-muted">None yet. One per theme you sell: each with its own keywords, ad and landing page.</p>
+    <% end %>
+    <% @plan.ad_groups.each do |group| %>
+      <%# herb:key group.id %>
+      <article class="panel panel--padded stack stack--sm">
+        <div class="row row--between">
+          <h3 class="heading"><%= group.name %></h3>
+          <% if can_plan %>
+            <div class="cluster cluster--sm">
+              <%= link_to "Edit", edit_google_ads_plan_ad_group_path(@plan, group), class: "btn btn--sm" %>
+              <%= button_to "Remove", google_ads_plan_ad_group_path(@plan, group), method: :delete, class: "btn btn--plain btn--sm", form_class: "contents",
+                    data: {turbo_confirm: "Remove the ad group “#{group.name}”?"} %>
+            </div>
+          <% end %>
+        </div>
+        <p class="text-small">Lands on <% if group.landing_path.present? %><code><%= group.landing_path %></code><% else %><span class="text-danger">no page yet</span><% end %></p>
+        <div class="stack stack--xs">
+          <span class="google-ads-label">Keywords (<%= group.keyword_list.size %>)</span>
+          <div class="cluster cluster--sm">
+            <% group.keyword_list.each do |keyword| %>
+              <%# herb:key "#{keyword[:match_type]}-#{keyword[:text]}" %>
+              <% open, close = match_marks[keyword[:match_type]] %>
+              <span class="google-ads-chip <%= "google-ads-chip--broad" if keyword[:match_type] == "BROAD" %>" title="<%= keyword[:match_type].capitalize %> match"><%= open %><%= keyword[:text] %><%= close %></span>
+            <% end %>
+          </div>
+        </div>
+        <div class="grid grid--2">
+          <div class="stack stack--xs">
+            <span class="google-ads-label">Headlines (<%= group.headline_list.size %>/15)</span>
+            <ol class="google-ads-copy" role="list">
+              <% group.headline_list.each_with_index do |headline, index| %>
+                <%# herb:key index %>
+                <li><span><%= headline %></span><span class="google-ads-count <%= "google-ads-count--over" if headline.length > GoogleAds::PlanAdGroup::HEADLINE_LIMIT %>"><%= headline.length %>/30</span></li>
+              <% end %>
+            </ol>
+          </div>
+          <div class="stack stack--xs">
+            <span class="google-ads-label">Descriptions (<%= group.description_list.size %>/4)</span>
+            <ol class="google-ads-copy" role="list">
+              <% group.description_list.each_with_index do |description, index| %>
+                <%# herb:key index %>
+                <li><span><%= description %></span><span class="google-ads-count <%= "google-ads-count--over" if description.length > GoogleAds::PlanAdGroup::DESCRIPTION_LIMIT %>"><%= description.length %>/90</span></li>
+              <% end %>
+            </ol>
+          </div>
+        </div>
+        <% if group.notes.present? %>
+          <p class="text-small text-muted google-ads-text"><%= group.notes %></p>
+        <% end %>
+      </article>
+    <% end %>
+  </section>
+
+  <section class="panel panel--padded stack stack--sm" id="negatives">
+    <% negatives = @plan.negative_keywords %>
+    <% missing = @live&.campaign ? @live.missing_negatives : nil %>
+    <div class="row row--between">
+      <h2 class="heading">Negative keywords (<%= negatives.size %>)</h2>
+      <div class="cluster cluster--sm">
+        <% if can_write && missing&.any? %>
+          <%= button_to "Add #{missing.size} to the campaign", negatives_google_ads_plan_path(@plan), class: "btn btn--primary btn--sm", form_class: "contents",
+                data: {turbo_confirm: "Add #{missing.size} negative keywords to “#{@live.campaign[:name]}”?"} %>
+        <% end %>
+        <% if can_plan %>
+          <%= link_to "Edit", edit_google_ads_plan_path(@plan, anchor: "negatives"), class: "btn btn--sm" %>
+        <% end %>
+      </div>
+    </div>
+    <% if missing %>
+      <p class="text-small text-muted"><%= missing.empty? ? "All of them are on the campaign." : "Those marked “not added” aren't on the campaign yet." %></p>
+    <% end %>
+    <% negatives.group_by { it[:group] }.each do |group, words| %>
+      <%# herb:key group %>
+      <div class="stack stack--xs">
+        <span class="google-ads-label"><%= group %></span>
+        <div class="cluster cluster--sm">
+          <% words.each do |word| %>
+            <%# herb:key "#{word[:match_type]}-#{word[:text]}" %>
+            <% open, close = match_marks[word[:match_type]] %>
+            <% pending = missing&.include?(word) %>
+            <span class="google-ads-chip <%= "google-ads-chip--pending" if pending %>"><%= open %><%= word[:text] %><%= close %><% if pending %><span class="visually-hidden"> (not added)</span><% end %></span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+
+  <% if @plan.notes.present? %>
+    <section class="panel panel--padded stack stack--xs">
+      <h2 class="heading">Notes</h2>
+      <p class="google-ads-text"><%= @plan.notes %></p>
+    </section>
+  <% end %>
+
+  <% if can_plan %>
+    <div>
+      <%= button_to "Delete this plan", google_ads_plan_path(@plan), method: :delete, class: "btn btn--plain", form_class: "contents",
+            data: {turbo_confirm: "Delete “#{@plan.name}”, its ad groups and checklist? The campaign in Google Ads isn't touched."} %>
+    </div>
+  <% end %>
+</div>

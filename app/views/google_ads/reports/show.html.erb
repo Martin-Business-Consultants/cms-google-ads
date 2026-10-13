@@ -5,6 +5,7 @@
 <% percent = ->(value) { value.nil? ? "–" : number_to_percentage(value * 100, precision: 1) } %>
 
 <% content_for :page_actions do %>
+  <%= link_to "Plans", google_ads_plans_path, class: "btn" %>
   <div class="cluster cluster--sm">
     <% GoogleAds::ReportsController::RANGES.each do |days| %>
       <%# herb:key days %>

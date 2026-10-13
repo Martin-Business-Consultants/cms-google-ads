@@ -4,11 +4,23 @@ module GoogleAds
   # A CMS plugin (docs/plugins.md): it extends the core only through
   # Cms::Plugins, and the core never names it.
   class Engine < ::Rails::Engine
+    initializer "google_ads.migrations" do |app|
+      config.paths["db/migrate"].expanded.each { |path| app.config.paths["db/migrate"] << path }
+    end
+
     initializer "google_ads.routes" do |app|
       app.routes.append do
         admin = proc do
           get "google_ads", to: "google_ads/reports#show", as: :google_ads_report
           post "google_ads/negative_keywords", to: "google_ads/negative_keywords#create", as: :google_ads_negative_keywords
+          scope "google_ads", module: "google_ads", as: "google_ads" do
+            resources :plans do
+              get :export, on: :member
+              post :negatives, on: :member, action: :apply_negatives
+              resources :ad_groups, only: [:new, :create, :edit, :update, :destroy], controller: "plan_ad_groups"
+              resources :tasks, only: [:create, :update, :destroy], controller: "plan_tasks"
+            end
+          end
           scope "settings", as: "settings" do
             resource :google_ads, only: [:show, :update], controller: "google_ads/settings" do
               # Connecting is a link (new), not a form: the admin's form-action policy
@@ -33,6 +45,12 @@ module GoogleAds
             post "negative_keywords", to: "changes#negative_keywords", as: :negative_keywords
             patch "campaigns/:id", to: "changes#campaign", as: :campaign
             post "conversions", to: "changes#conversions", as: :conversions
+            resources :plans, only: [:index, :show, :create, :update, :destroy] do
+              get :export, on: :member
+              post :negatives, on: :member
+              resources :ad_groups, only: [:create, :update, :destroy], controller: "plan_ad_groups"
+              resources :tasks, only: [:create, :update, :destroy], controller: "plan_tasks"
+            end
           end
         end
       end
@@ -44,12 +62,14 @@ module GoogleAds
         description: "One Google Ads account: spend, clicks and conversions by day and campaign, search terms with one-click negatives, " \
                      "and offline conversions by gclid, in the admin, the API and the cms CLI."
 
-      Cms::Plugins.permissions :google_ads, "Google Ads", %w[google_ads:read google_ads:write],
+      Cms::Plugins.permissions :google_ads, "Google Ads", %w[google_ads:read google_ads:plan google_ads:write],
         after: ["Google", "Leads", "Forms", "Globals"],
-        defaults: {editor: %w[google_ads:read], agent: %w[google_ads:read]}
+        defaults: {editor: %w[google_ads:read google_ads:plan], agent: %w[google_ads:read google_ads:plan]}
       Cms::Plugins.stylesheet :google_ads, "google_ads/google_ads"
-      Cms::Plugins.menu :google_ads, :google_ads, label: "Google Ads", icon: "chart", group: "Content", after: [:market, :leads, :forms, :globals],
+      Cms::Plugins.menu :google_ads, :google_ads, label: "Google Ads", icon: "megaphone", group: "Content", after: [:market, :leads, :forms, :globals],
         path: -> { google_ads_report_path }, capability: "google_ads:read"
+      Cms::Plugins.submenu :google_ads, :google_ads, label: "Figures", path: -> { google_ads_report_path }, capability: "google_ads:read"
+      Cms::Plugins.submenu :google_ads, :google_ads, label: "Plans", path: -> { google_ads_plans_path }, capability: "google_ads:read"
       Cms::Plugins.settings :google_ads, "Google Ads", -> { settings_google_ads_path },
         description: "Connect the Google Ads account: the OAuth client, the developer token, and which account to read.",
         capability: "settings:read"
@@ -68,6 +88,14 @@ module GoogleAds
       Cms::Plugins.api :google_ads, "/api/google_ads/campaigns/:id", description: "PATCH {status: PAUSED|ENABLED, validate_only}: pause or enable a campaign (google_ads:write)."
       Cms::Plugins.api :google_ads, "/api/google_ads/conversions",
         description: "POST {gclid, conversion_action_id, at, value, currency, validate_only}: upload an offline conversion, e.g. a lead that became a client (google_ads:write)."
+      Cms::Plugins.api :google_ads, "/api/google_ads/plans",
+        description: "Campaign plans: goal, budget, decision date, setup, ad groups (keywords, landing page, ad copy), negatives and a checklist with hints. " \
+                     "GET one for its checks and the live campaign beside it; POST {plan: {..., ad_groups: [...]}, template}; google_ads:plan to change."
+      Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/ad_groups", description: "A plan's ad groups (POST, PATCH, DELETE; google_ads:plan)."
+      Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/tasks", description: "A plan's checklist: PATCH {done: true} ticks a task (google_ads:plan)."
+      Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/export", description: "The plan as a CSV for Google Ads Editor's import."
+      Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/negatives",
+        description: "POST {validate_only}: add the plan's negatives the linked campaign doesn't have yet (google_ads:write)."
       Cms::Plugins.api :google_ads, "/api/google_ads/settings", description: "Settings › Google Ads (settings:read / settings:write; the secrets are never read back)."
     end
   end

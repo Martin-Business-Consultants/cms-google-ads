@@ -12,6 +12,9 @@ A Rails engine loaded into a CMS install from `plugins/google_ads`. Read the cor
 - `GoogleAds::Report` is every read (GAQL, normalized: money as decimals, rates worked out).
   `GoogleAds::Changes` is every write; each takes `validate_only`, and records an Event.
   `GoogleAds::Accounts` lists the accounts a sign-in reaches.
+- Plans: `GoogleAds::Plan` (+ `PlanAdGroup`, `PlanTask`, tables `google_ads_plans…`), `PlanTemplate`
+  (phases, the checklist with hints, the field hints, defaults), `PlanChecks` (what's wrong, before and
+  against the live campaign), `PlanLive` (the campaign and its negatives), `PlanExport` (Ads Editor CSV).
 - The API version is `GoogleAds::API_VERSION`, overridable in settings; Google retires versions about a
   year after release, so bump it when one sunsets.
 

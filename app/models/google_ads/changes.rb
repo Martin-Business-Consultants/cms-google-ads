@@ -34,6 +34,22 @@ class GoogleAds::Changes
     {campaign_id: campaign, match_type: match_type, added: added, failed: failed, validate_only: validate_only.present?}
   end
 
+  # A plan's negatives that aren't on its campaign yet, applied by match type.
+  def apply_plan_negatives(plan, validate_only: false)
+    raise GoogleAds::Error, "Link the plan to its campaign first (the campaign id)" if plan.campaign_id.blank?
+
+    live = GoogleAds::PlanLive.new(plan, report: GoogleAds::Report.new(settings: @settings, client: @client))
+    raise GoogleAds::Error, live.error if live.error
+    raise GoogleAds::Error, "No campaign #{plan.campaign_id} in this account" unless live.campaign
+
+    missing = live.missing_negatives
+    results = missing.group_by { it[:match_type] }.map do |match_type, negatives|
+      negative_keywords(campaign_id: plan.campaign_id, keywords: negatives.map { it[:text] }, match_type: match_type, validate_only: validate_only)
+    end
+    {campaign_id: plan.campaign_id, added: results.flat_map { it[:added] }, failed: results.filter_map { it[:failed] }.join("; ").presence,
+     already: live.negatives.size, validate_only: validate_only.present?}
+  end
+
   def campaign_status(campaign_id:, status:, validate_only: false)
     campaign = GoogleAds::Settings.customer_id(campaign_id) or raise GoogleAds::Error, "campaign_id is required"
     status = status.to_s.upcase

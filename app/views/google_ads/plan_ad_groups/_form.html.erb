@@ -1,0 +1,48 @@
+<%# locals: (plan:, ad_group:) %>
+<% hints = GoogleAds::PlanTemplate::HINTS %>
+<% url = ad_group.new_record? ? google_ads_plan_ad_groups_path(plan) : google_ads_plan_ad_group_path(plan, ad_group) %>
+<%= form_with model: ad_group, url: url, scope: :ad_group, class: "stack stack--lg" do |form| %>
+  <% if ad_group.errors.any? %>
+    <div class="notice notice--danger" role="alert"><%= ad_group.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <section class="panel panel--padded fields">
+    <div class="grid grid--2 fields-grid">
+      <%= settings_field "Name", hint: "One theme: the keywords, the ad and the landing page all about the same thing." do %>
+        <%= form.text_field :name, required: true, autofocus: ad_group.new_record?, placeholder: "Seasonal displays" %>
+      <% end %>
+      <%= settings_field "Landing page", hint: hints[:landing_path] do %>
+        <%= form.text_field :landing_path, placeholder: "/business-seasonal-displays" %>
+      <% end %>
+    </div>
+    <%= settings_field "Keywords", hint: hints[:keywords] do %>
+      <%= form.text_area :keywords, rows: 10, class: "google-ads-mono", placeholder: "\"commercial planters\"\n[storefront planters]" %>
+    <% end %>
+  </section>
+  <section class="panel panel--padded fields">
+    <div class="stack stack--xs">
+      <h2 class="heading">The ad</h2>
+      <p class="text-muted">A responsive search ad: Google shows up to 3 headlines and 2 descriptions at a time, mixed from these.</p>
+    </div>
+    <%= settings_field "Headlines (one a line)", hint: hints[:headlines] do %>
+      <%= form.text_area :headlines, rows: 15, class: "google-ads-mono" %>
+    <% end %>
+    <%= settings_field "Descriptions (one a line)", hint: hints[:descriptions] do %>
+      <%= form.text_area :descriptions, rows: 4, class: "google-ads-mono" %>
+    <% end %>
+    <div class="grid grid--2 fields-grid">
+      <%= settings_field "Display path 1", hint: "Up to 15 characters, shown after the domain: example.com/Planters/Business" do %>
+        <%= form.text_field :path1, maxlength: 15 %>
+      <% end %>
+      <%= settings_field "Display path 2" do %>
+        <%= form.text_field :path2, maxlength: 15 %>
+      <% end %>
+    </div>
+    <%= settings_field "Notes" do %>
+      <%= form.text_area :notes, rows: 2 %>
+    <% end %>
+  </section>
+  <div class="cluster">
+    <button type="submit" class="btn btn--primary"><%= ad_group.new_record? ? "Add ad group" : "Save" %></button>
+    <%= link_to "Cancel", google_ads_plan_path(plan, anchor: "ad-groups"), class: "btn" %>
+  </div>
+<% end %>

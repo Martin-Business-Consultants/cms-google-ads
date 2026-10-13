@@ -91,6 +91,29 @@ class GoogleAds::Report
     end
   end
 
+  # One campaign's settings, for comparing with a plan: nil when there's no such campaign.
+  def campaign(id)
+    id = GoogleAds::Settings.customer_id(id) or return
+    gaql = "SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.bidding_strategy_type, " \
+           "campaign.network_settings.target_search_network, campaign.network_settings.target_content_network, " \
+           "campaign.network_settings.target_partner_search_network, campaign_budget.amount_micros FROM campaign WHERE campaign.id = #{id}"
+    row = rows(gaql).first or return
+    campaign = row["campaign"].to_h
+    networks = campaign["networkSettings"].to_h
+    {id: campaign["id"], name: campaign["name"], status: campaign["status"], channel: campaign["advertisingChannelType"],
+     bidding: campaign["biddingStrategyType"], daily_budget: money(row.dig("campaignBudget", "amountMicros")),
+     search_network: networks["targetSearchNetwork"] == true, display_network: networks["targetContentNetwork"] == true,
+     partner_network: networks["targetPartnerSearchNetwork"] == true}
+  end
+
+  # The negative keywords on a campaign: [{text:, match_type:}].
+  def campaign_negatives(id)
+    id = GoogleAds::Settings.customer_id(id) or return []
+    gaql = "SELECT campaign_criterion.keyword.text, campaign_criterion.keyword.match_type FROM campaign_criterion " \
+           "WHERE campaign.id = #{id} AND campaign_criterion.negative = TRUE AND campaign_criterion.type = KEYWORD"
+    rows(gaql).map { {text: it.dig("campaignCriterion", "keyword", "text").to_s.downcase, match_type: it.dig("campaignCriterion", "keyword", "matchType")} }
+  end
+
   def conversion_actions
     gaql = "SELECT conversion_action.id, conversion_action.name, conversion_action.status, conversion_action.type, " \
            "conversion_action.category, conversion_action.primary_for_goal FROM conversion_action WHERE conversion_action.status != 'REMOVED'"

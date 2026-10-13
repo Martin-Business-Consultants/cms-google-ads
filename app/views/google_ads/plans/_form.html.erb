@@ -1,0 +1,95 @@
+<%# locals: (plan:) %>
+<% hints = GoogleAds::PlanTemplate::HINTS %>
+<%= form_with model: plan, url: plan.new_record? ? google_ads_plans_path : google_ads_plan_path(plan), scope: :plan, class: "stack stack--lg" do |form| %>
+  <% if plan.errors.any? %>
+    <div class="notice notice--danger" role="alert"><%= plan.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <section class="panel panel--padded fields">
+    <div class="stack stack--xs">
+      <h2 class="heading">What it's for</h2>
+      <p class="text-muted">Decide what success looks like before the first click. It's the only way to know, in two months, whether to keep paying.</p>
+    </div>
+    <div class="grid grid--2 fields-grid">
+      <%= settings_field "Name" do %>
+        <%= form.text_field :name, required: true, autofocus: plan.new_record?, placeholder: "Commercial: seasonal displays" %>
+      <% end %>
+      <%= settings_field "Status" do %>
+        <%= form.select :status, GoogleAds::Plan::STATUSES.invert %>
+      <% end %>
+    </div>
+    <%= settings_field "Goal", hint: hints[:goal] do %>
+      <%= form.text_area :goal, rows: 2 %>
+    <% end %>
+    <%= settings_field "Success, and when to stop", hint: hints[:success] do %>
+      <%= form.text_area :success, rows: 3 %>
+    <% end %>
+    <%= settings_field "Who it's for, and who it isn't", hint: hints[:audience] do %>
+      <%= form.text_area :audience, rows: 2 %>
+    <% end %>
+    <% if plan.new_record? %>
+      <%= settings_field "Start from", hint: "The template fills in the checklist and sensible setup; change anything after." do %>
+        <%= select_tag :template, options_for_select(GoogleAds::PlanTemplate::TEMPLATES.invert, params[:template] || "search_leads") %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section class="panel panel--padded fields">
+    <div class="stack stack--xs">
+      <h2 class="heading">Budget and dates</h2>
+    </div>
+    <div class="grid grid--2 fields-grid">
+      <%= settings_field "Daily budget", hint: hints[:daily_budget] do %>
+        <%= form.number_field :daily_budget, step: "0.01", min: 0, placeholder: "30" %>
+      <% end %>
+      <%= settings_field "Starts" do %>
+        <%= form.date_field :starts_on %>
+      <% end %>
+      <%= settings_field "Decide by", hint: hints[:decision_on] do %>
+        <%= form.date_field :decision_on %>
+      <% end %>
+      <%= settings_field "Campaign ID", hint: hints[:campaign_id] do %>
+        <%= form.text_field :campaign_id, placeholder: "Once it exists", autocomplete: "off" %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="panel panel--padded fields">
+    <div class="stack stack--xs">
+      <h2 class="heading">Setup</h2>
+    </div>
+    <%= settings_field "Locations", hint: hints[:locations] do %>
+      <%= form.text_area :locations, rows: 2 %>
+    <% end %>
+    <div class="grid grid--2 fields-grid">
+      <%= settings_field "Schedule", hint: hints[:schedule] do %>
+        <%= form.text_field :schedule %>
+      <% end %>
+      <%= settings_field "Networks", hint: hints[:networks] do %>
+        <%= form.select :networks, GoogleAds::Plan::NETWORKS.invert %>
+      <% end %>
+    </div>
+    <%= settings_field "Bidding", hint: hints[:bidding] do %>
+      <%= form.text_field :bidding %>
+    <% end %>
+    <%= settings_field "Final URL suffix", hint: hints[:final_url_suffix] do %>
+      <%= form.text_field :final_url_suffix, autocomplete: "off" %>
+    <% end %>
+  </section>
+
+  <section class="panel panel--padded fields" id="negatives">
+    <div class="stack stack--xs">
+      <h2 class="heading">Negative keywords</h2>
+    </div>
+    <%= settings_field "Negatives", hint: hints[:negatives] do %>
+      <%= form.text_area :negatives, rows: 12, class: "google-ads-mono", placeholder: "# Not what we sell\nmowing\nsnow removal\n[landscape architect]" %>
+    <% end %>
+    <%= settings_field "Notes" do %>
+      <%= form.text_area :notes, rows: 3 %>
+    <% end %>
+  </section>
+
+  <div class="cluster">
+    <button type="submit" class="btn btn--primary"><%= plan.new_record? ? "Make the plan" : "Save" %></button>
+    <%= link_to "Cancel", plan.new_record? ? google_ads_plans_path : google_ads_plan_path(plan), class: "btn" %>
+  </div>
+<% end %>

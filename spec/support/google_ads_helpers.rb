@@ -44,7 +44,7 @@ module GoogleAdsHelpers
       when /FROM customer/
         before = query.include?("'#{(Date.current - 60).iso8601}'")
         [{"metrics" => before ? metrics(500, 20, 100, 1) : metrics(1000, 40, 300, 3)}]
-      when /FROM campaign\b/
+      when /FROM campaign\b(?! WHERE campaign\.id)/
         [{"campaign" => {"id" => "555", "name" => "Commercial", "status" => "ENABLED", "advertisingChannelType" => "SEARCH", "biddingStrategyType" => "TARGET_SPEND"},
           "campaignBudget" => {"amountMicros" => "30000000"}, "metrics" => metrics(1000, 40, 300, 3).merge("searchImpressionShare" => 0.42)}]
       when /FROM search_term_view/
@@ -52,6 +52,14 @@ module GoogleAdsHelpers
           "adGroup" => {"id" => "77", "name" => "Design"}, "metrics" => metrics(90, 6, 48, 0)},
           {"searchTermView" => {"searchTerm" => "commercial planters", "status" => "ADDED"}, "campaign" => {"id" => "555", "name" => "Commercial"},
            "adGroup" => {"id" => "78", "name" => "Seasonal"}, "metrics" => metrics(120, 9, 54, 2)}]
+      when /FROM campaign_criterion/
+        [{"campaignCriterion" => {"keyword" => {"text" => "jobs", "matchType" => "PHRASE"}}}]
+      when /FROM campaign WHERE campaign.id = 555/
+        [{"campaign" => {"id" => "555", "name" => "Commercial", "status" => "ENABLED", "advertisingChannelType" => "SEARCH",
+          "networkSettings" => {"targetSearchNetwork" => true, "targetContentNetwork" => true, "targetPartnerSearchNetwork" => false}},
+          "campaignBudget" => {"amountMicros" => "40000000"}}]
+      when /FROM campaign WHERE campaign.id/
+        []
       when /FROM keyword_view/
         [{"adGroupCriterion" => {"criterionId" => "9", "keyword" => {"text" => "commercial planters", "matchType" => "PHRASE"}, "status" => "ENABLED", "qualityInfo" => {"qualityScore" => 7}},
           "adGroup" => {"name" => "Seasonal"}, "campaign" => {"id" => "555", "name" => "Commercial"}, "metrics" => metrics(120, 9, 54, 2)}]
