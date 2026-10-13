@@ -1,0 +1,24 @@
+<%# locals: (guide:) %>
+<section class="panel panel--padded stack stack--sm">
+  <h3 class="heading">Each ad group's page</h3>
+  <table class="data-table">
+    <tbody>
+      <% guide.plan.ad_groups.each do |group| %>
+        <%# herb:key group.id %>
+        <% problems = guide.checks.results.select { it[:area] == group.name && it[:message].start_with?("Landing page", "No landing page") } %>
+        <tr>
+          <td><strong><%= group.name %></strong></td>
+          <td><% if group.landing_path %><code><%= group.landing_path %></code><% end %></td>
+          <td>
+            <% if problems.any? %>
+              <span class="text-small text-danger"><%= problems.map { it[:message] }.to_sentence %></span>
+            <% else %>
+              <span class="badge badge--success">Published</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <p class="text-small text-muted">Then, on a phone: does each page say what its ad says, is the form near the top, is there proof, is the phone number tappable? Submit the form once.</p>
+</section>

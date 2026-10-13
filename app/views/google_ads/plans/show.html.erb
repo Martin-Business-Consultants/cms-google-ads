@@ -7,6 +7,7 @@
 <% match_marks = {"EXACT" => ["[", "]"], "PHRASE" => ["\"", "\""], "BROAD" => ["", ""]} %>
 
 <% content_for :page_actions do %>
+  <%= link_to "Guide", google_ads_plan_guide_path(@plan), class: "btn btn--primary" %>
   <%= link_to "Download for Ads Editor", export_google_ads_plan_path(@plan), class: "btn", data: {turbo: false} %>
   <% if can_plan %>
     <%= link_to "Edit", edit_google_ads_plan_path(@plan), class: "btn" %>
@@ -46,6 +47,27 @@
         </dd>
       <% end %>
     </dl>
+  </section>
+
+  <section class="panel panel--padded stack stack--sm">
+    <div class="row row--between">
+      <h2 class="heading">The guide</h2>
+      <span class="text-small text-muted"><%= @guide.done_count %> of <%= @guide.steps.size %> campaign steps done</span>
+    </div>
+    <ol class="google-ads-steps-inline" role="list">
+      <% @guide.steps.each do |step| %>
+        <%# herb:key step.key %>
+        <% status = @guide.status(step) %>
+        <%= tag.li class: "google-ads-rail__step--#{status}" do %>
+          <%= link_to google_ads_plan_guide_step_path(@plan, step.key), class: "google-ads-rail__link" do %>
+            <span class="google-ads-rail__mark"><%= (status == "done") ? icon_tag("check", class: "icon--xs") : "" %></span><%= step.title %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </ol>
+    <% if @plan.exclusion_lists.any? %>
+      <p class="text-small">Exclusion lists: <%= @plan.exclusion_lists.map(&:name).to_sentence %></p>
+    <% end %>
   </section>
 
   <section class="panel panel--padded stack stack--sm" id="checks">

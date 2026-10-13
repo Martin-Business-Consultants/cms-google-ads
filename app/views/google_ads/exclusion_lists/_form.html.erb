@@ -1,0 +1,28 @@
+<%# locals: (list:) %>
+<%= form_with model: list, url: list.new_record? ? google_ads_exclusion_lists_path : google_ads_exclusion_list_path(list), scope: :exclusion_list, class: "stack stack--lg" do |form| %>
+  <%= hidden_field_tag :back, params[:back] if params[:back].present? %>
+  <% if list.errors.any? %>
+    <div class="notice notice--danger" role="alert"><%= list.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <section class="panel panel--padded fields">
+    <div class="grid grid--2 fields-grid">
+      <%= settings_field "Name", hint: "Shown in Google Ads as the shared list's name." do %>
+        <%= form.text_field :name, required: true, autofocus: list.new_record?, placeholder: "Residential" %>
+      <% end %>
+      <%= settings_field "What it keeps out" do %>
+        <%= form.text_field :description, placeholder: "Homeowners searching for their own yard" %>
+      <% end %>
+    </div>
+    <%= settings_field "Keywords", hint: GoogleAds::PlanTemplate::HINTS[:negatives] do %>
+      <%= form.text_area :keywords, rows: 16, class: "google-ads-mono", placeholder: "homeowner\nbackyard\n[home]" %>
+    <% end %>
+  </section>
+  <div class="cluster">
+    <button type="submit" class="btn btn--primary"><%= list.new_record? ? "Add list" : "Save" %></button>
+    <%= link_to "Cancel", params[:back].presence || google_ads_exclusion_lists_path, class: "btn" %>
+  </div>
+<% end %>
+<% if list.persisted? && Current.user.can?("google_ads:plan") %>
+  <%= button_to "Delete this list", google_ads_exclusion_list_path(list), method: :delete, class: "btn btn--plain", form_class: "contents",
+        data: {turbo_confirm: "Delete “#{list.name}”? Campaigns using it lose it here; the shared list stays in Google Ads until removed there."} %>
+<% end %>

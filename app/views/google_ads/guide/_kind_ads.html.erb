@@ -1,0 +1,27 @@
+<%# locals: (guide:) %>
+<section class="panel panel--padded stack stack--sm">
+  <%= render "google_ads/guide/groups_header", guide: guide, title: "Ads by ad group" %>
+  <% guide.plan.ad_groups.each do |group| %>
+    <%# herb:key group.id %>
+    <div class="stack stack--xs google-ads-list">
+      <div class="row row--between">
+        <strong><%= group.name %></strong>
+        <%= link_to "Edit", edit_google_ads_plan_ad_group_path(guide.plan, group), class: "link text-small" %>
+      </div>
+      <div class="grid grid--2">
+        <ol class="google-ads-copy" role="list">
+          <% group.headline_list.each_with_index do |headline, index| %>
+            <%# herb:key index %>
+            <li><span><%= headline %></span><span class="google-ads-count <%= "google-ads-count--over" if headline.length > 30 %>"><%= headline.length %>/30</span></li>
+          <% end %>
+        </ol>
+        <ol class="google-ads-copy" role="list">
+          <% group.description_list.each_with_index do |description, index| %>
+            <%# herb:key index %>
+            <li><span><%= description %></span><span class="google-ads-count <%= "google-ads-count--over" if description.length > 90 %>"><%= description.length %>/90</span></li>
+          <% end %>
+        </ol>
+      </div>
+    </div>
+  <% end %>
+</section>

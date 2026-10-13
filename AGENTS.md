@@ -15,6 +15,11 @@ A Rails engine loaded into a CMS install from `plugins/google_ads`. Read the cor
 - Plans: `GoogleAds::Plan` (+ `PlanAdGroup`, `PlanTask`, tables `google_ads_plans…`), `PlanTemplate`
   (phases, the checklist with hints, the field hints, defaults), `PlanChecks` (what's wrong, before and
   against the live campaign), `PlanLive` (the campaign and its negatives), `PlanExport` (Ads Editor CSV).
+- The guide: `GoogleAds::Guide` (the steps: fields with hints, research task and answer JSON shape),
+  `Guide::Progress`, `Guide::Prompt` (context from the brand brief, `Brief`, exclusion lists and the plan),
+  `Guide::Answer` (reads pasted JSON, describes and applies it). `Brief` holds the strategy's answers;
+  `Answerable` stores a step's fields in a column or `answers`. `Economics` turns the numbers into verdicts.
+  `ExclusionList` + `SharedSets` (shared negative keyword sets in Google Ads).
 - The API version is `GoogleAds::API_VERSION`, overridable in settings; Google retires versions about a
   year after release, so bump it when one sunsets.
 

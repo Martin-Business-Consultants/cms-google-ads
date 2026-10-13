@@ -50,6 +50,24 @@ class GoogleAds::Changes
      already: live.negatives.size, validate_only: validate_only.present?}
   end
 
+  # An exclusion list made the same in Google Ads (a shared negative keyword set).
+  def sync_exclusion_list(list, validate_only: false)
+    answer = GoogleAds::SharedSets.new(settings: @settings, client: @client).sync(list, validate_only: validate_only)
+    record("google_ads.exclusion_list_synced", list: list.name, added: answer[:added].size, removed: answer[:removed].size) unless validate_only
+    answer
+  end
+
+  # A plan's exclusion lists synced, then attached to its campaign.
+  def attach_exclusion_lists(plan, validate_only: false)
+    raise GoogleAds::Error, "Link the plan to its campaign first (the campaign id)" if plan.campaign_id.blank?
+    raise GoogleAds::Error, "Choose the plan's exclusion lists first" if plan.exclusion_lists.empty?
+
+    synced = plan.exclusion_lists.map { sync_exclusion_list(it, validate_only: validate_only) }
+    attached = GoogleAds::SharedSets.new(settings: @settings, client: @client).attach(plan.exclusion_lists.reload, plan.campaign_id, validate_only: validate_only)
+    record("google_ads.exclusion_lists_attached", campaign_id: plan.campaign_id, shared_set_ids: attached) unless validate_only || attached.empty?
+    {campaign_id: plan.campaign_id, synced: synced, attached: attached, validate_only: validate_only.present?}
+  end
+
   def campaign_status(campaign_id:, status:, validate_only: false)
     campaign = GoogleAds::Settings.customer_id(campaign_id) or raise GoogleAds::Error, "campaign_id is required"
     status = status.to_s.upcase

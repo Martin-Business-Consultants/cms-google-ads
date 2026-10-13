@@ -1,0 +1,38 @@
+<%# locals: (guide:) %>
+<% can_plan = Current.user.can?("google_ads:plan") %>
+<section class="panel panel--padded stack stack--sm">
+  <div class="row row--between">
+    <h3 class="heading">Your exclusion lists</h3>
+    <% if can_plan %>
+      <%= link_to "New list", new_google_ads_exclusion_list_path(back: request.path), class: "btn btn--sm" %>
+    <% end %>
+  </div>
+  <% if guide.lists.empty? %>
+    <p class="text-muted">None yet. Start from the research prompt above, or add a list by hand. A good start: what you don't sell, who isn't a customer, and jobs, training, DIY and free.</p>
+  <% end %>
+  <% guide.lists.each do |list| %>
+    <%# herb:key list.id %>
+    <div class="stack stack--xs google-ads-list">
+      <div class="row row--between">
+        <strong><%= list.name %> <span class="text-small text-muted">(<%= list.keyword_list.size %>)</span></strong>
+        <span class="cluster cluster--sm text-small">
+          <% if list.synced? %><span class="badge badge--success">In Google Ads</span><% elsif list.shared_set_id %><span class="badge badge--warning">Changed since sync</span><% end %>
+          <% if can_plan %><%= link_to "Edit", edit_google_ads_exclusion_list_path(list, back: request.path), class: "link" %><% end %>
+        </span>
+      </div>
+      <% if list.description.present? %><span class="text-small text-muted"><%= list.description %></span><% end %>
+      <div class="cluster cluster--sm">
+        <% list.keyword_list.first(40).each do |keyword| %>
+          <%# herb:key "#{keyword[:match_type]}-#{keyword[:text]}" %>
+          <span class="google-ads-chip"><%= (keyword[:match_type] == "EXACT") ? "[#{keyword[:text]}]" : keyword[:text] %></span>
+        <% end %>
+        <% if list.keyword_list.size > 40 %><span class="text-small text-muted">and <%= list.keyword_list.size - 40 %> more</span><% end %>
+      </div>
+    </div>
+  <% end %>
+  <% sells = guide.brief.answer(:sells).to_s.downcase %>
+  <% clashes = guide.lists.flat_map { |list| list.keyword_list.select { |keyword| keyword[:match_type] == "PHRASE" && sells.match?(/\b#{Regexp.escape(keyword[:text])}\b/) }.map { [list.name, it[:text]] } } %>
+  <% if clashes.any? %>
+    <p class="notice notice--danger">These would block searches for what you sell: <%= clashes.map { "“#{it[1]}” (#{it[0]})" }.to_sentence %>. Make them [exact] or remove them.</p>
+  <% end %>
+</section>

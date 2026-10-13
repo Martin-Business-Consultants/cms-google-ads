@@ -1,0 +1,27 @@
+<%# locals: (guide:) %>
+<% marks = {"EXACT" => ["[", "]"], "PHRASE" => ["\"", "\""], "BROAD" => ["", ""]} %>
+<section class="panel panel--padded stack stack--sm">
+  <%= render "google_ads/guide/groups_header", guide: guide, title: "Keywords by ad group" %>
+  <% if guide.plan.ad_groups.empty? %>
+    <p class="text-muted">Set up the ad groups first.</p>
+  <% end %>
+  <% guide.plan.ad_groups.each do |group| %>
+    <%# herb:key group.id %>
+    <div class="stack stack--xs google-ads-list">
+      <div class="row row--between">
+        <strong><%= group.name %> <span class="text-small text-muted">(<%= group.keyword_list.size %>)</span></strong>
+        <%= link_to "Edit", edit_google_ads_plan_ad_group_path(guide.plan, group), class: "link text-small" %>
+      </div>
+      <div class="cluster cluster--sm">
+        <% group.keyword_list.each do |keyword| %>
+          <%# herb:key "#{keyword[:match_type]}-#{keyword[:text]}" %>
+          <% open, close = marks[keyword[:match_type]] %>
+          <span class="google-ads-chip <%= "google-ads-chip--broad" if keyword[:match_type] == "BROAD" %>"><%= open %><%= keyword[:text] %><%= close %></span>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  <% if guide.plan.negative_keywords.any? %>
+    <p class="text-small"><strong>This campaign's own negatives:</strong> <%= guide.plan.negative_keywords.map { it[:text] }.join(", ") %></p>
+  <% end %>
+</section>

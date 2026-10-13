@@ -1,0 +1,6 @@
+<%# locals: (guide:) %>
+<% if guide.economics.complete? %>
+  <%= render "google_ads/guide/economics", economics: guide.economics %>
+<% else %>
+  <p class="notice notice--warning">Fill in <%= link_to "What a customer is worth", google_ads_strategy_step_path("economics"), class: "link" %> first, and this step shows what the budget buys and whether it can pay.</p>
+<% end %>

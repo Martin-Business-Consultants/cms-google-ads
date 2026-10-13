@@ -1,0 +1,42 @@
+<% @page_title = "Exclusion lists" %>
+<% can_plan = Current.user.can?("google_ads:plan") %>
+<% can_write = Current.user.can?("google_ads:write") %>
+<% content_for :page_actions do %>
+  <%= link_to "Build them with the guide", google_ads_strategy_step_path("exclusions"), class: "btn" %>
+  <% if can_plan %><%= link_to "New list", new_google_ads_exclusion_list_path, class: "btn btn--primary" %><% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Exclusion lists" %>
+
+<p class="text-muted">Negative keywords kept once, by theme, for every campaign: each list becomes a shared negative keyword list in Google Ads, attached to the campaigns whose plans use it. Change a list here, then sync it.</p>
+<section class="panel panel--scroll">
+  <table class="data-table">
+    <thead><tr><th>List</th><th class="data-table__num">Keywords</th><th>Google Ads</th><th></th></tr></thead>
+    <tbody>
+      <% if @lists.empty? %>
+        <tr><td colspan="4" class="data-table__empty">None yet.</td></tr>
+      <% end %>
+      <% @lists.each do |list| %>
+        <%# herb:key list.id %>
+        <tr>
+          <td><strong><%= list.name %></strong><% if list.description.present? %><div class="text-small text-muted"><%= list.description %></div><% end %></td>
+          <td class="data-table__num"><%= list.keyword_list.size %></td>
+          <td class="text-small">
+            <% if list.sync_error %>
+              <span class="text-danger"><%= list.sync_error %></span>
+            <% elsif list.synced? %>
+              <span class="badge badge--success">In sync</span> <%= time_ago_in_words(list.synced_at) %> ago
+            <% elsif list.shared_set_id %>
+              <span class="badge badge--warning">Changed since sync</span>
+            <% else %>
+              <span class="text-muted">Not synced</span>
+            <% end %>
+          </td>
+          <td class="data-table__num nowrap">
+            <% if can_write && @ready %><%= button_to "Sync", sync_google_ads_exclusion_list_path(list), class: "btn btn--sm", form_class: "contents" %><% end %>
+            <% if can_plan %><%= link_to "Edit", edit_google_ads_exclusion_list_path(list), class: "btn btn--sm" %><% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

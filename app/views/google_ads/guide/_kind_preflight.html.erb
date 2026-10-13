@@ -1,0 +1,28 @@
+<%# locals: (guide:) %>
+<% can_write = Current.user.can?("google_ads:write") %>
+<% badges = {"problem" => ["badge badge--danger", "Fix"], "warning" => ["badge badge--warning", "Check"], "ok" => ["badge badge--success", "Ready"]} %>
+<section class="panel panel--padded stack stack--sm">
+  <div class="row row--between">
+    <h3 class="heading">Checks</h3>
+    <span class="text-small text-muted"><%= pluralize(guide.checks.problems, "thing") %> to fix, <%= guide.checks.warnings %> to check</span>
+  </div>
+  <ul class="google-ads-checks" role="list">
+    <% guide.checks.results.each_with_index do |check, index| %>
+      <%# herb:key index %>
+      <li><span class="<%= badges[check[:level]][0] %>"><%= badges[check[:level]][1] %></span> <span class="text-small"><strong><%= check[:area] %></strong> · <%= check[:message] %></span></li>
+    <% end %>
+  </ul>
+</section>
+<section class="panel panel--padded stack stack--sm">
+  <h3 class="heading">Build and protect it</h3>
+  <ol class="google-ads-tips">
+    <li><strong>Build it:</strong> <%= link_to "Download for Ads Editor", export_google_ads_plan_path(guide.plan), class: "link", data: {turbo: false} %>, then in Google Ads Editor: Account › Import › From file. It arrives paused; review it, then post.</li>
+    <li><strong>Link it:</strong> put the campaign's id in <%= link_to "Settings and exclusions", google_ads_plan_guide_step_path(guide.plan, "setup"), class: "link" %>.</li>
+    <li><strong>Protect it:</strong> sync the exclusion lists to Google Ads and attach them to the campaign.
+      <% if can_write && guide.plan.campaign_id.present? && guide.plan.exclusion_lists.any? %>
+        <%= button_to "Sync and attach exclusion lists", exclusions_google_ads_plan_path(guide.plan), params: {back: request.path}, class: "btn btn--sm", form_class: "contents" %>
+      <% end %>
+    </li>
+    <li><strong>Work the checklist:</strong> <%= link_to "launch week, then every week", google_ads_plan_path(guide.plan, anchor: "checklist"), class: "link" %>.</li>
+  </ol>
+</section>

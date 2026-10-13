@@ -1,0 +1,42 @@
+<%# locals: (guide:, can_plan:) %>
+<% values = guide.values || {} %>
+<%= form_with url: step_path(guide.step), method: :patch, class: "stack stack--lg", id: "step-form" do %>
+  <%= tag.fieldset class: "panel panel--padded fields", disabled: !can_plan do %>
+    <% if guide.record.errors.any? %>
+      <div class="notice notice--danger" role="alert"><%= guide.record.errors.full_messages.to_sentence %></div>
+    <% end %>
+    <% guide.step.fields.each do |field| %>
+      <%# herb:key field.key %>
+      <% value = values.key?(field.key) ? values[field.key] : guide.record.answer(field.key) %>
+      <% filled = values.key?(field.key) %>
+      <% label = field.required ? field.label : "#{field.label} (optional)" %>
+      <%= settings_field label, hint: field.hint do %>
+        <% name = "answers[#{field.key}]" %>
+        <% klass = class_names("google-ads-filled": filled) %>
+        <% case field.type %>
+        <% when :lines, :textarea %>
+          <%= text_area_tag name, value, rows: field.lines? ? [value.to_s.lines.size + 1, 4].max : 3, placeholder: field.placeholder, class: klass, id: "answer_#{field.key}" %>
+        <% when :money, :number %>
+          <%= number_field_tag name, value, step: "0.01", min: 0, placeholder: field.placeholder, class: klass, id: "answer_#{field.key}" %>
+        <% when :percent %>
+          <span class="google-ads-suffix"><%= number_field_tag name, value, step: "0.1", min: 0, max: 100, placeholder: field.placeholder, class: klass, id: "answer_#{field.key}" %> %</span>
+        <% when :date %>
+          <%= date_field_tag name, value, class: klass, id: "answer_#{field.key}" %>
+        <% when :select %>
+          <%= select_tag name, options_for_select(field.choices, value), class: klass, id: "answer_#{field.key}" %>
+        <% else %>
+          <%= text_field_tag name, value, placeholder: field.placeholder, class: klass, id: "answer_#{field.key}" %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% if guide.step.kind == :setup %>
+      <%= render "google_ads/guide/exclusion_choice", guide: guide %>
+    <% end %>
+  <% end %>
+  <% if can_plan %>
+    <div class="cluster cluster--sm">
+      <button type="submit" name="next" value="done" class="btn btn--primary">Save and continue</button>
+      <button type="submit" class="btn">Save</button>
+    </div>
+  <% end %>
+<% end %>

@@ -1,0 +1,16 @@
+<%# locals: (guide:) %>
+<% apply_path = guide.plan ? google_ads_plan_guide_step_apply_path(guide.plan, guide.step.key) : google_ads_strategy_step_apply_path(guide.step.key) %>
+<section class="panel panel--padded stack stack--sm" id="preview">
+  <h3 class="heading">What the answer would change</h3>
+  <ul class="google-ads-tips">
+    <% guide.answer.changes.each_with_index do |change, index| %>
+      <%# herb:key index %>
+      <li><%= change %></li>
+    <% end %>
+  </ul>
+  <div class="cluster cluster--sm">
+    <%= button_to "Apply these changes", apply_path, params: {payload: JSON.generate(guide.answer.data)}, class: "btn btn--primary", form_class: "contents" %>
+    <%= link_to "Discard", step_path(guide.step), class: "btn btn--plain" %>
+  </div>
+  <p class="text-small text-muted">Existing lists keep their keywords and gain the new ones; ad groups are matched by name, and new ones are added. You can edit everything after.</p>
+</section>

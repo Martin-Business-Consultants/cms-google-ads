@@ -14,6 +14,18 @@ and the few changes worth making from here.
   enabling a campaign, and uploading an offline conversion by the click's gclid. Every change takes
   `validate_only` to dry-run, and is recorded in the audit log.
 
+- **The guide** (Google Ads › Strategy, then each plan's Guide): steps a marketer from the big picture to a
+  campaign ready to launch. **Strategy**, answered once and shared by every campaign: the business and its
+  offer (and what it doesn't sell), customers and market, what a customer is worth (the guide works out
+  what a lead and a click can cost and whether ads can pay), competitors, and exclusion lists. Then **each
+  campaign**: goal and budget (checked against the economics), audience, ad groups, keywords, ad copy,
+  landing pages, settings and exclusions, and pre-flight. Every step says why it matters, gives tips, and
+  writes a **research prompt for Claude** from everything answered so far: copy it, run it in Claude,
+  paste the reply back, and the guide reads its JSON into the step for you to review before saving
+  (lists and ad groups show what they'd change first). Agents do the same through the API.
+- **Exclusion lists** (Google Ads › Exclusion lists): negative keywords kept once by theme, synced to Google
+  Ads as shared negative keyword lists and attached to each plan's campaign. The guide warns when one would
+  block what you sell or a plan's own keywords.
 - **Campaign plans** (Google Ads › Plans): plan a campaign before a cent is spent. A plan holds the goal,
   what success looks like and the date you'll decide, the budget and setup (each with a hint on why), its
   ad groups (keywords, landing page, a responsive search ad's headlines and descriptions with their
@@ -73,6 +85,12 @@ read back.
     PATCH /api/google_ads/plans/:id/tasks/:id   {"done": true}
     GET   /api/google_ads/plans/:id/export      CSV for Google Ads Editor
     POST  /api/google_ads/plans/:id/negatives   {"validate_only": true}: add the plan's negatives the campaign lacks
+    GET   /api/google_ads/guide                 the strategy's steps and where each stands (and /plans/:id/guide for a campaign's)
+    GET   /api/google_ads/guide/:step           questions, answers, and the research prompt
+    PATCH /api/google_ads/guide/:step           {"answers": {...}, "done": true}
+    POST  /api/google_ads/guide/:step/answer    {"answer": "Claude's reply, or its JSON", "preview": true}
+    GET   /api/google_ads/exclusion_lists       (POST, PATCH, DELETE; POST :id/sync {validate_only})
+    POST  /api/google_ads/plans/:id/exclusions  sync the plan's lists and attach them to its campaign
     GET   /api/google_ads/settings              (PATCH with settings:write)
 
 Ranges are whole days ending yesterday. Money is in the account's currency, as decimals; `ctr` is a

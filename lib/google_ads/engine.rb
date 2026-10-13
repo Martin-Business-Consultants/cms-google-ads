@@ -13,10 +13,26 @@ module GoogleAds
         admin = proc do
           get "google_ads", to: "google_ads/reports#show", as: :google_ads_report
           post "google_ads/negative_keywords", to: "google_ads/negative_keywords#create", as: :google_ads_negative_keywords
+          get "google_ads/strategy", to: "google_ads/guide#show", as: :google_ads_strategy
           scope "google_ads", module: "google_ads", as: "google_ads" do
+            get "strategy/:step", to: "guide#show", as: :strategy_step
+            patch "strategy/:step", to: "guide#update"
+            post "strategy/:step/answer", to: "guide#answer", as: :strategy_step_answer
+            post "strategy/:step/apply", to: "guide#apply", as: :strategy_step_apply
+            post "strategy/:step/done", to: "guide#done", as: :strategy_step_done
+            resources :exclusion_lists, except: :show do
+              post :sync, on: :member
+            end
+            get "plans/:plan_id/guide", to: "guide#show", as: :plan_guide
+            get "plans/:plan_id/guide/:step", to: "guide#show", as: :plan_guide_step
+            patch "plans/:plan_id/guide/:step", to: "guide#update"
+            post "plans/:plan_id/guide/:step/answer", to: "guide#answer", as: :plan_guide_step_answer
+            post "plans/:plan_id/guide/:step/apply", to: "guide#apply", as: :plan_guide_step_apply
+            post "plans/:plan_id/guide/:step/done", to: "guide#done", as: :plan_guide_step_done
             resources :plans do
               get :export, on: :member
               post :negatives, on: :member, action: :apply_negatives
+              post :exclusions, on: :member, action: :attach_exclusions
               resources :ad_groups, only: [:new, :create, :edit, :update, :destroy], controller: "plan_ad_groups"
               resources :tasks, only: [:create, :update, :destroy], controller: "plan_tasks"
             end
@@ -45,9 +61,21 @@ module GoogleAds
             post "negative_keywords", to: "changes#negative_keywords", as: :negative_keywords
             patch "campaigns/:id", to: "changes#campaign", as: :campaign
             post "conversions", to: "changes#conversions", as: :conversions
+            get "guide", to: "guide#index", as: :guide
+            get "guide/:step", to: "guide#show", as: :guide_step
+            patch "guide/:step", to: "guide#update"
+            post "guide/:step/answer", to: "guide#answer", as: :guide_step_answer
+            get "plans/:plan_id/guide", to: "guide#index", as: :plan_guide
+            get "plans/:plan_id/guide/:step", to: "guide#show", as: :plan_guide_step
+            patch "plans/:plan_id/guide/:step", to: "guide#update"
+            post "plans/:plan_id/guide/:step/answer", to: "guide#answer", as: :plan_guide_step_answer
+            resources :exclusion_lists, only: [:index, :show, :create, :update, :destroy] do
+              post :sync, on: :member
+            end
             resources :plans, only: [:index, :show, :create, :update, :destroy] do
               get :export, on: :member
               post :negatives, on: :member
+              post :exclusions, on: :member
               resources :ad_groups, only: [:create, :update, :destroy], controller: "plan_ad_groups"
               resources :tasks, only: [:create, :update, :destroy], controller: "plan_tasks"
             end
@@ -69,7 +97,9 @@ module GoogleAds
       Cms::Plugins.menu :google_ads, :google_ads, label: "Google Ads", icon: "megaphone", group: "Content", after: [:market, :leads, :forms, :globals],
         path: -> { google_ads_report_path }, capability: "google_ads:read"
       Cms::Plugins.submenu :google_ads, :google_ads, label: "Figures", path: -> { google_ads_report_path }, capability: "google_ads:read"
-      Cms::Plugins.submenu :google_ads, :google_ads, label: "Plans", path: -> { google_ads_plans_path }, capability: "google_ads:read"
+      Cms::Plugins.submenu :google_ads, :google_ads, label: "Strategy", path: -> { google_ads_strategy_path }, capability: "google_ads:read"
+      Cms::Plugins.submenu :google_ads, :google_ads, label: "Campaign plans", path: -> { google_ads_plans_path }, capability: "google_ads:read"
+      Cms::Plugins.submenu :google_ads, :google_ads, label: "Exclusion lists", path: -> { google_ads_exclusion_lists_path }, capability: "google_ads:read"
       Cms::Plugins.settings :google_ads, "Google Ads", -> { settings_google_ads_path },
         description: "Connect the Google Ads account: the OAuth client, the developer token, and which account to read.",
         capability: "settings:read"
@@ -96,6 +126,12 @@ module GoogleAds
       Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/export", description: "The plan as a CSV for Google Ads Editor's import."
       Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/negatives",
         description: "POST {validate_only}: add the plan's negatives the linked campaign doesn't have yet (google_ads:write)."
+      Cms::Plugins.api :google_ads, "/api/google_ads/guide",
+        description: "The planning guide's strategy steps (and /api/google_ads/plans/:id/guide, a campaign's): where each stands. GET guide/:step for its questions, " \
+                     "answers and a research prompt to run in Claude; PATCH {answers}; POST guide/:step/answer {answer: Claude's reply or its JSON, preview} to apply it."
+      Cms::Plugins.api :google_ads, "/api/google_ads/exclusion_lists",
+        description: "Negative keyword lists kept once by theme; POST :id/sync {validate_only} makes the shared set in Google Ads match (google_ads:write)."
+      Cms::Plugins.api :google_ads, "/api/google_ads/plans/:id/exclusions", description: "POST {validate_only}: sync the plan's exclusion lists and attach them to its campaign (google_ads:write)."
       Cms::Plugins.api :google_ads, "/api/google_ads/settings", description: "Settings › Google Ads (settings:read / settings:write; the secrets are never read back)."
     end
   end

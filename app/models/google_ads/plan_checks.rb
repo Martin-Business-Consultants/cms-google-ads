@@ -39,7 +39,7 @@ class GoogleAds::PlanChecks
     add("warning", "Plan", "No locations: a local business pays for clicks from everywhere") if @plan.locations.blank?
     add("warning", "Plan", "#{@plan.networks_label}: Search only keeps a small budget on searches") unless @plan.networks == "search"
     add("warning", "Plan", "No final URL suffix: leads can't be traced to their keyword") if @plan.final_url_suffix.blank?
-    add("warning", "Plan", "No negatives yet: the first days' clicks are the most wasted") if @plan.negative_keywords.empty?
+    add("warning", "Plan", "No negatives or exclusion lists yet: the first days' clicks are the most wasted") if @plan.all_negatives.empty?
     if @plan.ad_groups.empty?
       add("problem", "Plan", "No ad groups yet")
     elsif @plan.daily_budget && @plan.daily_budget / @plan.ad_groups.size < 5
@@ -93,7 +93,7 @@ class GoogleAds::PlanChecks
 
   # A negative that matches one of the plan's own keywords blocks it.
   def conflict_checks(group)
-    negatives = @negatives ||= @plan.negative_keywords
+    negatives = @negatives ||= @plan.all_negatives
     group.keyword_list.each do |keyword|
       blocker = negatives.find { |negative| (negative[:match_type] == "EXACT") ? keyword[:text] == negative[:text] : " #{keyword[:text]} ".include?(" #{negative[:text]} ") }
       add("problem", group.name, "The negative “#{blocker[:text]}” blocks the keyword “#{keyword[:text]}”") if blocker
@@ -113,11 +113,14 @@ class GoogleAds::PlanChecks
     if @plan.daily_budget && campaign[:daily_budget] && (campaign[:daily_budget] - @plan.daily_budget.to_f).abs > 0.5
       add("warning", area, "Budget is #{format("%.2f", campaign[:daily_budget])} a day; the plan says #{format("%.2f", @plan.daily_budget)}")
     end
+    unattached = @live.unattached_lists
+    unattached.each { add("warning", area, "The exclusion list “#{it.name}” #{it.shared_set_id ? "isn't attached to the campaign" : "isn't in Google Ads yet: sync it"}") }
+    add("ok", area, "Its exclusion lists are attached") if unattached.empty? && @plan.exclusion_lists.any?
     missing = @live.missing_negatives
     if missing.any?
       add("warning", area, "#{missing.size} of the plan's negatives aren't on the campaign yet: #{missing.map { it[:text] }.first(5).join(", ")}#{"…" if missing.size > 5}")
     elsif @plan.negative_keywords.any?
-      add("ok", area, "Every negative in the plan is on the campaign")
+      add("ok", area, "Every negative of the plan's own is on the campaign")
     end
   end
 end

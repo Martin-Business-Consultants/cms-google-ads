@@ -1,0 +1,35 @@
+<%# locals: (guide:) %>
+<% answer_path = guide.plan ? google_ads_plan_guide_step_answer_path(guide.plan, guide.step.key) : google_ads_strategy_step_answer_path(guide.step.key) %>
+<section class="panel panel--padded stack stack--sm google-ads-research" id="research">
+  <div class="row row--between">
+    <h3 class="heading">Research it with Claude</h3>
+    <span class="text-small text-muted">Optional, and usually faster</span>
+  </div>
+  <ol class="google-ads-research__steps">
+    <li class="stack stack--xs">
+      <div class="row row--between">
+        <span><strong>Copy the prompt.</strong> It carries everything answered so far, and asks for the answer in a shape this step can read.</span>
+        <button type="button" class="btn btn--primary btn--sm" data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="<%= guide.prompt %>"
+                data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">Copy prompt</button>
+      </div>
+      <details>
+        <summary class="text-small link">See the prompt</summary>
+        <pre class="google-ads-prompt"><%= guide.prompt %></pre>
+      </details>
+    </li>
+    <li><strong>Run it in Claude</strong> (claude.ai or Claude Code), with web search on. Push back, ask follow-ups, until the answer is right for the business.</li>
+    <li class="stack stack--xs">
+      <strong>Paste Claude's whole reply here.</strong> Nothing is saved yet: <%= guide.step.fields.any? ? "the form below fills in for you to check." : "you'll see what it would change first." %>
+      <%= form_with url: answer_path, class: "stack stack--xs" do |form| %>
+        <%= form.text_area :answer, value: guide.pasted, rows: 6, class: "google-ads-mono", required: true, placeholder: "…\n```json\n{ … }\n```", aria: {label: "Claude's reply"} %>
+        <div><button type="submit" class="btn">Read the answer</button></div>
+      <% end %>
+    </li>
+  </ol>
+  <% if guide.answer&.notes %>
+    <div class="notice notice--info stack stack--xs">
+      <strong>Claude's notes</strong>
+      <p class="google-ads-text"><%= guide.answer.notes %></p>
+    </div>
+  <% end %>
+</section>

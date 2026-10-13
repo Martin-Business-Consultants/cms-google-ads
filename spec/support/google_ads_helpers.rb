@@ -17,6 +17,8 @@ module GoogleAdsHelpers
         elsif url.include?("listAccessibleCustomers") then {"resourceNames" => ["customers/1234567890", "customers/9998887777"]}
         elsif url.include?("googleAds:search") then google_ads_search(url, body[:query])
         elsif url.include?("campaignCriteria:mutate") then {"results" => body[:operations].map.with_index { {"resourceName" => "customers/1234567890/campaignCriteria/111~#{_2}"} }}
+        elsif url.include?("sharedSets:mutate") then {"results" => [{"resourceName" => "customers/1234567890/sharedSets/901"}]}
+        elsif url.include?("sharedCriteria:mutate") || url.include?("campaignSharedSets:mutate") then {"results" => body[:operations].map { {"resourceName" => "x"} }}
         elsif url.include?("campaigns:mutate") then {"results" => [{"resourceName" => body.dig(:operations, 0, :update, :resourceName)}]}
         elsif url.include?(":uploadClickConversions") then {"results" => [{"gclid" => body.dig(:conversions, 0, :gclid)}]}
         end
@@ -52,6 +54,13 @@ module GoogleAdsHelpers
           "adGroup" => {"id" => "77", "name" => "Design"}, "metrics" => metrics(90, 6, 48, 0)},
           {"searchTermView" => {"searchTerm" => "commercial planters", "status" => "ADDED"}, "campaign" => {"id" => "555", "name" => "Commercial"},
            "adGroup" => {"id" => "78", "name" => "Seasonal"}, "metrics" => metrics(120, 9, 54, 2)}]
+      when /FROM shared_set WHERE/
+        [{"sharedSet" => {"id" => "900", "name" => "Jobs"}}]
+      when /FROM shared_criterion/
+        [{"sharedCriterion" => {"criterionId" => "1", "keyword" => {"text" => "jobs", "matchType" => "PHRASE"}}},
+          {"sharedCriterion" => {"criterionId" => "2", "keyword" => {"text" => "salary", "matchType" => "PHRASE"}}}]
+      when /FROM campaign_shared_set/
+        [{"sharedSet" => {"id" => "900"}}]
       when /FROM campaign_criterion/
         [{"campaignCriterion" => {"keyword" => {"text" => "jobs", "matchType" => "PHRASE"}}}]
       when /FROM campaign WHERE campaign.id = 555/

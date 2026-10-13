@@ -1,0 +1,77 @@
+<% guide = @guide %>
+<% steps = guide.progress.steps %>
+<% index = steps.index(guide.step) %>
+<% can_plan = Current.user.can?("google_ads:plan") %>
+<% @page_title = guide.step.title %>
+<% content_for :page_actions do %>
+  <% if guide.plan %>
+    <%= link_to "The plan", google_ads_plan_path(guide.plan), class: "btn" %>
+  <% else %>
+    <%= link_to "Campaign plans", google_ads_plans_path, class: "btn" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: guide.plan ? guide.plan.name : "Strategy" %>
+
+<div class="google-ads-guide">
+  <%= render "google_ads/guide/rail", guide: guide %>
+
+  <div class="stack stack--lg google-ads-guide__main">
+    <section class="panel panel--padded stack stack--sm">
+      <span class="google-ads-label"><%= guide.plan ? "Campaign" : "Strategy" %> · step <%= index + 1 %> of <%= steps.size %></span>
+      <h2 class="google-ads-step-title"><%= guide.step.title %></h2>
+      <p class="text-muted"><%= guide.step.summary %></p>
+      <div class="notice notice--info stack stack--xs">
+        <strong>Why this matters</strong>
+        <p><%= guide.step.why %></p>
+      </div>
+      <% if guide.step.tips.any? %>
+        <ul class="google-ads-tips">
+          <% guide.step.tips.each_with_index do |tip, tip_index| %>
+            <%# herb:key tip_index %>
+            <li><%= tip %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </section>
+
+    <% if guide.step.research? && can_plan %>
+      <%= render "google_ads/guide/research", guide: guide %>
+    <% end %>
+
+    <% if guide.answer && guide.step.fields.empty? %>
+      <%= render "google_ads/guide/preview", guide: guide %>
+    <% end %>
+
+    <%= render "google_ads/guide/kind_#{guide.step.kind}", guide: guide if lookup_context.exists?("kind_#{guide.step.kind}", ["google_ads/guide"], true) %>
+
+    <% if guide.step.fields.any? %>
+      <%= render "google_ads/guide/form", guide: guide, can_plan: can_plan %>
+    <% end %>
+
+    <nav class="row row--between google-ads-guide__nav" aria-label="Steps">
+      <% if index.positive? %>
+        <%= link_to "← #{steps[index - 1].title}", step_path(steps[index - 1]), class: "btn btn--plain" %>
+      <% else %>
+        <span></span>
+      <% end %>
+      <div class="cluster cluster--sm">
+        <% if can_plan && guide.step.fields.empty? %>
+          <% if guide.record.step_done?(guide.step.key) %>
+            <%= button_to "Mark not done", guide.plan ? google_ads_plan_guide_step_done_path(guide.plan, guide.step.key) : google_ads_strategy_step_done_path(guide.step.key),
+                  params: {undo: 1}, class: "btn btn--plain", form_class: "contents" %>
+          <% else %>
+            <%= button_to "Mark done, next step", guide.plan ? google_ads_plan_guide_step_done_path(guide.plan, guide.step.key) : google_ads_strategy_step_done_path(guide.step.key),
+                  class: "btn btn--primary", form_class: "contents" %>
+          <% end %>
+        <% end %>
+        <% if steps[index + 1] %>
+          <%= link_to "#{steps[index + 1].title} →", step_path(steps[index + 1]), class: "btn" %>
+        <% elsif !guide.plan %>
+          <%= link_to "On to a campaign →", google_ads_plans_path, class: "btn" %>
+        <% else %>
+          <%= link_to "The plan and its checklist →", google_ads_plan_path(guide.plan), class: "btn" %>
+        <% end %>
+      </div>
+    </nav>
+  </div>
+</div>

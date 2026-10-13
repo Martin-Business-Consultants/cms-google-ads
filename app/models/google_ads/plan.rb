@@ -6,6 +6,8 @@
 # research to that decision. Linked to the live campaign (campaign_id), it is
 # checked against it (Plan::Checks) and its negatives can be applied.
 class GoogleAds::Plan < ApplicationRecord
+  include GoogleAds::Answerable
+
   STATUSES = {"planning" => "Planning", "live" => "Live", "paused" => "Paused", "done" => "Done"}.freeze
   NETWORKS = {"search" => "Search only", "search_partners" => "Search and search partners", "search_display" => "Search and Display"}.freeze
 
@@ -27,6 +29,13 @@ class GoogleAds::Plan < ApplicationRecord
   def self.from_template(attributes = {}, template: "search_leads")
     new(attributes).tap { GoogleAds::PlanTemplate.apply(it, template) }
   end
+
+  def guide_scope = :plan
+
+  def exclusion_lists = GoogleAds::ExclusionList.where(id: Array(exclusion_list_ids)).ordered
+
+  # The plan's own negatives and its exclusion lists', for checking keywords against.
+  def all_negatives = negative_keywords + exclusion_lists.flat_map { |list| list.keyword_list.map { it.merge(group: list.name) } }
 
   def status_label = STATUSES.fetch(status)
   def networks_label = NETWORKS.fetch(networks)
@@ -58,7 +67,7 @@ class GoogleAds::Plan < ApplicationRecord
     {id: id, name: name, status: status, goal: goal, success: success, audience: audience, daily_budget: daily_budget&.to_f,
      monthly_budget: monthly_budget&.to_f, starts_on: starts_on, decision_on: decision_on, days_to_decision: days_to_decision,
      locations: locations, schedule: schedule, bidding: bidding, networks: networks, final_url_suffix: final_url_suffix,
-     campaign_id: campaign_id, negatives: negatives, negative_keywords: negative_keywords, notes: notes, progress: progress,
+     campaign_id: campaign_id, exclusion_list_ids: Array(exclusion_list_ids), answers: answers, done_steps: Array(done_steps), negatives: negatives, negative_keywords: negative_keywords, notes: notes, progress: progress,
      ad_groups: ad_groups.map(&:as_json), tasks: tasks.map(&:as_json), updated_at: updated_at}
   end
 end

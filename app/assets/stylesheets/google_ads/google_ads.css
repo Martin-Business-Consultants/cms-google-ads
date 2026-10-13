@@ -203,3 +203,143 @@
     margin-block-start: var(--space-2);
   }
 }
+
+/* The guide: the steps down the side, the step beside them, the research box. */
+@layer components {
+  .google-ads-guide {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 64rem) {
+    .google-ads-guide {
+      align-items: start;
+      grid-template-columns: 16rem minmax(0, 1fr);
+    }
+
+    .google-ads-rail {
+      position: sticky;
+      top: var(--space-4);
+    }
+  }
+
+  .google-ads-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .google-ads-rail__steps,
+  .google-ads-steps-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .google-ads-steps-inline {
+    flex-flow: row wrap;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .google-ads-rail__link {
+    align-items: center;
+    border-radius: var(--radius-lg);
+    color: inherit;
+    display: flex;
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    text-decoration: none;
+  }
+
+  .google-ads-rail__link:hover {
+    background-color: var(--gray-100);
+  }
+
+  .google-ads-rail__step--current .google-ads-rail__link {
+    background-color: var(--accent-50);
+    font-weight: var(--weight-semibold);
+  }
+
+  .google-ads-rail__mark {
+    align-items: center;
+    border: 1.5px solid var(--gray-300);
+    border-radius: 999px;
+    color: var(--gray-600);
+    display: inline-flex;
+    flex: none;
+    font-size: var(--text-xs);
+    height: 1.25rem;
+    justify-content: center;
+    width: 1.25rem;
+  }
+
+  .google-ads-rail__step--done .google-ads-rail__mark {
+    background-color: var(--green-500);
+    border-color: var(--green-500);
+    color: white;
+  }
+
+  .google-ads-rail__step--started .google-ads-rail__mark {
+    border-color: var(--accent-600);
+    color: var(--accent-600);
+  }
+
+  .google-ads-step-title {
+    font-size: var(--text-xl, 1.25rem);
+    font-weight: var(--weight-semibold);
+  }
+
+  .google-ads-tips {
+    display: flex;
+    flex-direction: column;
+    font-size: var(--text-sm);
+    gap: var(--space-1);
+    padding-inline-start: var(--space-4);
+  }
+
+  .google-ads-research {
+    border-inline-start: 3px solid var(--accent-600);
+  }
+
+  .google-ads-research__steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-inline-start: var(--space-4);
+  }
+
+  .google-ads-prompt {
+    background-color: var(--gray-50);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-xs);
+    max-height: 24rem;
+    overflow: auto;
+    padding: var(--space-3);
+    white-space: pre-wrap;
+  }
+
+  .google-ads-filled {
+    background-color: var(--yellow-50, var(--accent-50));
+  }
+
+  .google-ads-suffix {
+    align-items: center;
+    display: inline-flex;
+    gap: var(--space-1);
+  }
+
+  .google-ads-list {
+    border-block-start: 1px solid var(--gray-100);
+    padding-block-start: var(--space-2);
+  }
+
+  .google-ads-guide__nav {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+}

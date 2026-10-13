@@ -1,0 +1,17 @@
+<%# locals: (guide:) %>
+<% chosen = Array(guide.record.exclusion_list_ids) %>
+<div class="field">
+  <span class="label">Exclusion lists this campaign uses</span>
+  <%= hidden_field_tag "exclusion_list_ids[]", "", id: nil %>
+  <% if guide.lists.empty? %>
+    <span class="help">None yet: build them in <%= link_to "Strategy › Exclusion lists", google_ads_strategy_step_path("exclusions"), class: "link" %>.</span>
+  <% end %>
+  <% guide.lists.each do |list| %>
+    <%# herb:key list.id %>
+    <label class="choice">
+      <%= check_box_tag "exclusion_list_ids[]", list.id, chosen.include?(list.id), id: "exclusion_list_#{list.id}" %>
+      <span><%= list.name %> <span class="text-small text-muted"><%= pluralize(list.keyword_list.size, "keyword") %><%= " · #{list.description}" if list.description.present? %></span></span>
+    </label>
+  <% end %>
+  <span class="help">Usually all of them. They're synced to Google Ads and attached to the campaign in Pre-flight.</span>
+</div>

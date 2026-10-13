@@ -4,7 +4,8 @@ require "csv"
 
 # A plan as a CSV for Google Ads Editor (Account › Import › From file): the
 # campaign, its ad groups, keywords, a responsive search ad each, and the
-# negatives, so it's built in one import and reviewed there before posting.
+# negatives (its own and its exclusion lists', as campaign negatives, for an
+# account the API can't reach), so it's built in one import and reviewed there before posting.
 class GoogleAds::PlanExport
   HEADERS = ["Campaign", "Campaign Daily Budget", "Campaign Type", "Networks", "Campaign Status", "Ad Group", "Ad Group Status",
     "Keyword", "Criterion Type", "Ad type", *(1..15).map { "Headline #{it}" }, *(1..4).map { "Description #{it}" },
@@ -33,7 +34,7 @@ class GoogleAds::PlanExport
         group.description_list.first(4).each_with_index { |text, index| ad["Description #{index + 1}"] = text }
         csv << row(ad)
       end
-      @plan.negative_keywords.each { csv << row("Keyword" => it[:text], "Criterion Type" => "Negative #{MATCH.fetch(it[:match_type])}") }
+      @plan.all_negatives.uniq { [it[:text], it[:match_type]] }.each { csv << row("Keyword" => it[:text], "Criterion Type" => "Negative #{MATCH.fetch(it[:match_type])}") }
     end
   end
 

@@ -1,0 +1,22 @@
+<%# locals: (guide:) %>
+<aside class="google-ads-rail" aria-label="The guide">
+  <div class="stack stack--xs">
+    <span class="google-ads-label">Strategy <span class="text-muted">· shared by every campaign · <%= guide.brief_progress.done_count %>/<%= guide.brief_progress.steps.size %></span></span>
+    <%= render "google_ads/guide/rail_steps", progress: guide.brief_progress, plan: nil, current: guide.step %>
+  </div>
+  <% if guide.plan %>
+    <div class="stack stack--xs">
+      <span class="google-ads-label">This campaign <span class="text-muted">· <%= guide.progress.done_count %>/<%= guide.progress.steps.size %></span></span>
+      <%= render "google_ads/guide/rail_steps", progress: guide.progress, plan: guide.plan, current: guide.step %>
+    </div>
+    <div class="stack stack--xs">
+      <span class="google-ads-label">Then</span>
+      <%= link_to "The checklist: launch, every week, every month", google_ads_plan_path(guide.plan, anchor: "checklist"), class: "link text-small" %>
+    </div>
+  <% else %>
+    <div class="stack stack--xs">
+      <span class="google-ads-label">Then, for each campaign</span>
+      <%= link_to "Campaign plans", google_ads_plans_path, class: "link text-small" %>
+    </div>
+  <% end %>
+</aside>

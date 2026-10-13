@@ -1,0 +1,27 @@
+<%# locals: (economics:) %>
+<% badge = {"problem" => "badge badge--danger", "warning" => "badge badge--warning", "ok" => "badge badge--success"} %>
+<% label = {"problem" => "Doesn't pay", "warning" => "Check", "ok" => "Pays"} %>
+<section class="panel panel--padded stack stack--sm">
+  <h3 class="heading">What the numbers say</h3>
+  <% if economics.complete? %>
+    <div class="google-ads-figures">
+      <% [["A lead is worth up to", economics.max_cost_per_lead], ["A lead should cost", economics.expected_cost_per_lead], ["Break-even cost per click", economics.break_even_cpc]].each do |title, value| %>
+        <%# herb:key title %>
+        <div class="google-ads-figure"><span class="google-ads-figure__label"><%= title %></span><strong class="google-ads-figure__value"><%= number_to_currency(value) %></strong></div>
+      <% end %>
+      <% if economics.clicks_a_day %>
+        <% [["Clicks a day", economics.clicks_a_day], ["Leads a month", economics.leads_a_month], ["Customers a month", economics.customers_a_month]].each do |title, value| %>
+          <%# herb:key title %>
+          <div class="google-ads-figure"><span class="google-ads-figure__label"><%= title %></span><strong class="google-ads-figure__value"><%= number_with_delimiter(value) %></strong></div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+  <ul class="google-ads-checks" role="list">
+    <% economics.verdicts.each_with_index do |(level, message), index| %>
+      <%# herb:key index %>
+      <li><span class="<%= badge[level] %>"><%= label[level] %></span> <span class="text-small"><%= message %></span></li>
+    <% end %>
+  </ul>
+  <p class="text-small text-muted">A lead's worth is a customer's value × the share of leads that become customers × your margin. Estimates, so revisit them after the first month of real numbers.</p>
+</section>

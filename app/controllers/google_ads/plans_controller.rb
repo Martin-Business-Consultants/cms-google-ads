@@ -6,15 +6,16 @@ module GoogleAds
   class PlansController < ApplicationController
     requires_capability "google_ads:read", only: [:index, :show, :export]
     requires_capability "google_ads:plan", only: [:new, :create, :edit, :update, :destroy]
-    requires_capability "google_ads:write", only: :apply_negatives
+    requires_capability "google_ads:write", only: [:apply_negatives, :attach_exclusions]
 
-    before_action :set_plan, only: [:show, :edit, :update, :destroy, :export, :apply_negatives]
+    before_action :set_plan, only: [:show, :edit, :update, :destroy, :export, :apply_negatives, :attach_exclusions]
 
     def index
       @plans = GoogleAds::Plan.ordered.includes(:tasks, :ad_groups).to_a
     end
 
     def show
+      @guide = GoogleAds::Guide::Progress.new(@plan)
       @live = GoogleAds::PlanLive.for(@plan)
       @checks = GoogleAds::PlanChecks.new(@plan, live: @live)
     end
@@ -27,7 +28,7 @@ module GoogleAds
       @plan = GoogleAds::Plan.from_template(plan_params, template: params[:template])
       if @plan.save
         Event.record("google_ads.plan_created", plan_id: @plan.id)
-        redirect_to google_ads_plan_path(@plan), notice: "Plan made. Start with the checklist."
+        redirect_to google_ads_plan_guide_path(@plan), notice: "Plan made. The guide takes it from here, a step at a time."
       else
         render :new, status: :unprocessable_content
       end
@@ -63,7 +64,16 @@ module GoogleAds
       redirect_to google_ads_plan_path(@plan), alert: error.message
     end
 
+    def attach_exclusions
+      answer = GoogleAds::Changes.new.attach_exclusion_lists(@plan)
+      redirect_to back_or_plan, notice: "Exclusion lists synced#{", and #{answer[:attached].size} attached to the campaign" if answer[:attached].any?}"
+    rescue GoogleAds::Error => error
+      redirect_to back_or_plan, alert: error.message
+    end
+
     private
+
+    def back_or_plan = params[:back].to_s.start_with?("/") && !params[:back].to_s.start_with?("//") ? params[:back] : google_ads_plan_path(@plan)
 
     def plan_params
       params.require(:plan).permit(:name, :status, :goal, :success, :audience, :daily_budget, :starts_on, :decision_on, :locations, :schedule,

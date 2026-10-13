@@ -106,7 +106,7 @@ RSpec.describe "Google Ads plans", type: :request do
 
       post google_ads_plans_path, params: {plan: {name: "Commercial", daily_budget: "30", networks: "search", status: "planning"}, template: "search_leads"}
       plan = GoogleAds::Plan.last
-      expect(response).to redirect_to(google_ads_plan_path(plan))
+      expect(response).to redirect_to(google_ads_plan_guide_path(plan))
 
       post google_ads_plan_ad_groups_path(plan), params: {ad_group: {name: "Seasonal", landing_path: "/nowhere", keywords: "\"commercial planters\"", headlines: "One\nTwo\nThree", descriptions: "A\nB"}}
       expect(plan.ad_groups.count).to eq(1)

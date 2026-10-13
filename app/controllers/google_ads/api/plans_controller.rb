@@ -7,13 +7,14 @@ module GoogleAds
     class PlansController < BaseController
       PLAN_FIELDS = %i[name status goal success audience daily_budget starts_on decision_on locations schedule bidding networks
         final_url_suffix campaign_id negatives notes].freeze
+      # exclusion_list_ids: the exclusion lists the plan's campaign uses.
       AD_GROUP_FIELDS = %i[name landing_path keywords headlines descriptions path1 path2 notes].freeze
 
       requires_capability "google_ads:read", only: [:index, :show, :export]
       requires_capability "google_ads:plan", only: [:create, :update, :destroy]
-      requires_capability "google_ads:write", only: :negatives
+      requires_capability "google_ads:write", only: [:negatives, :exclusions]
 
-      before_action :set_plan, only: [:show, :update, :destroy, :export, :negatives]
+      before_action :set_plan, only: [:show, :update, :destroy, :export, :negatives, :exclusions]
 
       def index
         plans = GoogleAds::Plan.ordered.includes(:tasks, :ad_groups)
@@ -22,7 +23,7 @@ module GoogleAds
 
       def show
         live = GoogleAds::PlanLive.for(@plan, settings: settings)
-        render json: {**@plan.as_json, checks: GoogleAds::PlanChecks.new(@plan, live: live).results,
+        render json: {**@plan.as_json, guide: GoogleAds::Guide::Progress.new(@plan).to_a, checks: GoogleAds::PlanChecks.new(@plan, live: live).results,
                       live: live && {campaign: live.campaign, negatives_on_campaign: live.negatives.size, missing_negatives: live.missing_negatives, error: live.error}}
       end
 
@@ -57,6 +58,12 @@ module GoogleAds
         render json: GoogleAds::Changes.new(settings: settings).apply_plan_negatives(@plan, validate_only: validate_only?)
       end
 
+      # POST {validate_only}: the plan's exclusion lists synced to Google Ads and attached to its campaign.
+      def exclusions
+        report # the readiness check
+        render json: GoogleAds::Changes.new(settings: settings).attach_exclusion_lists(@plan, validate_only: validate_only?)
+      end
+
       private
 
       def set_plan
@@ -64,7 +71,7 @@ module GoogleAds
       end
 
       def plan_params
-        attributes = params.require(:plan).permit(*PLAN_FIELDS, negatives: [])
+        attributes = params.require(:plan).permit(*PLAN_FIELDS, negatives: [], exclusion_list_ids: [])
         attributes[:negatives] = attributes[:negatives].join("\n") if attributes[:negatives].is_a?(Array)
         attributes
       end

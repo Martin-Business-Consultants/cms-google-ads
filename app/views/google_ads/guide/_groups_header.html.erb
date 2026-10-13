@@ -1,0 +1,7 @@
+<%# locals: (guide:, title:) %>
+<div class="row row--between">
+  <h3 class="heading"><%= title %></h3>
+  <% if Current.user.can?("google_ads:plan") %>
+    <%= link_to "Add ad group", new_google_ads_plan_ad_group_path(guide.plan), class: "btn btn--sm" %>
+  <% end %>
+</div>

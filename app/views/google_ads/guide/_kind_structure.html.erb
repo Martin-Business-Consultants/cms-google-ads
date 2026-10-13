@@ -1,0 +1,19 @@
+<%# locals: (guide:) %>
+<section class="panel panel--padded stack stack--sm">
+  <%= render "google_ads/guide/groups_header", guide: guide, title: "Ad groups (#{guide.plan.ad_groups.size})" %>
+  <% if guide.plan.ad_groups.empty? %>
+    <p class="text-muted">None yet. Each one: a theme someone searches for, and the page that answers it.</p>
+  <% end %>
+  <table class="data-table">
+    <tbody>
+      <% guide.plan.ad_groups.each do |group| %>
+        <%# herb:key group.id %>
+        <tr>
+          <td><strong><%= group.name %></strong><% if group.notes.present? %><div class="text-small text-muted google-ads-text"><%= group.notes %></div><% end %></td>
+          <td><% if group.landing_path %><code><%= group.landing_path %></code><% else %><span class="text-danger text-small">No landing page</span><% end %></td>
+          <td class="data-table__num"><%= link_to "Edit", edit_google_ads_plan_ad_group_path(guide.plan, group), class: "link text-small" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
