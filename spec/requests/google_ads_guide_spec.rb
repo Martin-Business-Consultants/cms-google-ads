@@ -4,6 +4,8 @@ require "rails_helper"
 require_relative "../support/google_ads_helpers"
 
 RSpec.describe "Google Ads guide", type: :request do
+  include ActiveJob::TestHelper
+
   let(:admin) { create(:user) }
 
   def api_headers(user) = {"Authorization" => "Bearer #{user.api_token!.token}", "Accept" => "application/json"}
@@ -36,6 +38,65 @@ RSpec.describe "Google Ads guide", type: :request do
       expect(response).to redirect_to(google_ads_strategy_step_path("customers"))
       follow_redirect!
       expect(response.body).to include("Business name: Healing Earth Design", "What you don&#39;t sell, that people confuse with you: Lawn mowing")
+    end
+
+    it "fills a step with the install's AI, in the step's exact shape, for review before anything is saved" do
+      get google_ads_strategy_step_path("customers")
+      expect(response.body).to include("Fill it in with AI", "Or research it with Claude")
+      expect(response.body).not_to include(">Fill with AI<")
+
+      switch_plugin :ai, on: true
+      Ai::Settings.update("provider" => "opencode", "api_key" => "zen-key")
+      answer = {"segments" => ["Restaurants: storefronts that draw people in"], "not_customers" => ["Homeowners", "Job seekers"], "decision_makers" => "The owner",
+                "service_area" => "Kent County", "buying_triggers" => ["A new location"], "seasonality" => "Displays are booked in October"}
+      asked = nil
+      allow(Ai).to receive(:structured) { |**options| asked = options; answer }
+
+      expect { post google_ads_strategy_step_fill_path("customers") }.to have_enqueued_job(GoogleAds::FillJob)
+      expect(response).to redirect_to(google_ads_strategy_step_path("customers", anchor: "research"))
+      follow_redirect!
+      expect(response.body).to include("The AI is researching this step")
+
+      perform_enqueued_jobs
+      expect(asked[:schema]).to include(type: "object", additionalProperties: false, required: %w[segments not_customers decision_makers service_area buying_triggers seasonality])
+      expect(asked[:schema][:properties]["segments"]).to eq(type: "array", items: {type: "string"})
+      expect(asked[:prompt]).to include("## Your task", "customer segments")
+
+      get google_ads_strategy_step_path("customers")
+      expect(response.body).to include("Filled in by the AI", "Homeowners\nJob seekers", "Kent County", "Fill it in again")
+      expect(GoogleAds::Brief.current.answer(:service_area)).to be_nil
+
+      patch google_ads_strategy_step_path("customers"), params: {answers: answer.merge("segments" => answer["segments"].join("\n"), "not_customers" => "Homeowners", "buying_triggers" => "A new location")}
+      get google_ads_strategy_step_path("customers")
+      expect(response.body).not_to include("Filled in by the AI")
+      expect(GoogleAds::Brief.current.answer(:service_area)).to eq("Kent County")
+    end
+
+    it "says why when the AI fails, and fills list steps as changes to apply" do
+      switch_plugin :ai, on: true
+      Ai::Settings.update("provider" => "opencode", "api_key" => "zen-key")
+      allow(Ai).to receive(:structured).and_raise(Ai::Error, "The provider timed out")
+      post google_ads_strategy_step_fill_path("customers")
+      perform_enqueued_jobs
+      get google_ads_strategy_step_path("customers")
+      expect(response.body).to include("finish: The provider timed out")
+
+      allow(Ai).to receive(:structured).and_return("lists" => [{"name" => "Jobs", "description" => "Job seekers", "keywords" => ["jobs", "careers"]}])
+      post google_ads_strategy_step_fill_path("exclusions")
+      perform_enqueued_jobs
+      get google_ads_strategy_step_path("exclusions")
+      expect(response.body).to include("Here&#39;s what the AI&#39;s answer would change", "New list “Jobs”")
+      expect(GoogleAds::ExclusionList.count).to eq(0)
+    end
+
+    it "reads a pasted answer wrapped in an object, or keyed by the questions' labels" do
+      wrapped = claude_reply(customers: {"Customer segments" => ["Restaurants"], "notCustomers" => ["Homeowners"], "Service area" => "Kent County"})
+      post google_ads_strategy_step_answer_path("customers"), params: {answer: wrapped}
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Filled in from the answer", "Restaurants", "Homeowners", "Kent County")
+
+      post google_ads_strategy_step_answer_path("customers"), params: {answer: claude_reply(summary: "Nothing useful")}
+      expect(response.body).to include("none of the keys this step asks for", "Fill it with AI")
     end
 
     it "says when a pasted answer can't be read" do

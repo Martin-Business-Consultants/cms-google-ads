@@ -20,13 +20,18 @@ and the few changes worth making from here.
   what a lead and a click can cost and whether ads can pay), competitors, and exclusion lists. Then **each
   campaign**: goal and budget (checked against the economics), audience, ad groups, keywords, ad copy,
   landing pages, settings and exclusions, and pre-flight. Every step says why it matters, gives tips, and
-  writes a **research prompt for Claude** from everything answered so far: copy it, run it in Claude,
-  paste the reply back, and the guide reads its JSON into the step for you to review before saving
-  (lists and ad groups show what they'd change first). Agents do the same through the API.
+  has **Fill with AI**: the install's AI (the [AI plugin](https://github.com/Martin-Business-Consultants/cms-ai),
+  set up in Settings › AI) answers the step from everything answered so far, in exactly the shape the step
+  needs, and the form fills in (lists and ad groups show what they'd change first) for you to work through
+  before saving. Or copy the step's **research prompt for Claude**, run it in Claude with web search, and
+  paste the reply back: the guide reads its JSON the same way, forgiving a reply wrapped in an outer object
+  or keyed by the questions' labels. Agents do the same through the API.
 - **Exclusion lists** (Google Ads › Exclusion lists): negative keywords kept once by theme, synced to Google
   Ads as shared negative keyword lists and attached to each plan's campaign. The guide warns when one would
   block what you sell or a plan's own keywords.
-- **Campaign plans** (Google Ads › Plans): plan a campaign before a cent is spent. A plan holds the goal,
+- **Campaign plans** (Google Ads › Plans): plan a campaign before a cent is spent. **Fill with AI** on a new
+  plan drafts it from the strategy (and a line on what it's for, if you give one): name, goal, success and
+  when to stop, who it's for, budget, decision date and setup, a first draft to work through before making it. A plan holds the goal,
   what success looks like and the date you'll decide, the budget and setup (each with a hint on why), its
   ad groups (keywords, landing page, a responsive search ad's headlines and descriptions with their
   character counts) and its negatives, and a checklist from research to that decision (Before you build,

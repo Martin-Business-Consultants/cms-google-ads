@@ -187,7 +187,8 @@
             <% group.keyword_list.each do |keyword| %>
               <%# herb:key "#{keyword[:match_type]}-#{keyword[:text]}" %>
               <% open, close = match_marks[keyword[:match_type]] %>
-              <span class="google-ads-chip <%= "google-ads-chip--broad" if keyword[:match_type] == "BROAD" %>" title="<%= keyword[:match_type].capitalize %> match"><%= open %><%= keyword[:text] %><%= close %></span>
+              <% broad = keyword[:match_type] == "BROAD" %>
+              <span class="<%= class_names("google-ads-chip", "google-ads-chip--broad": broad) %>" title="<%= keyword[:match_type].capitalize %> match"><%= open %><%= keyword[:text] %><%= close %></span>
             <% end %>
           </div>
         </div>

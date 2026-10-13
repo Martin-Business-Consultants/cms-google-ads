@@ -4,7 +4,8 @@
   <% progress.steps.each_with_index do |step, index| %>
     <%# herb:key step.key %>
     <% status = progress.status(step) %>
-    <%= tag.li class: ["google-ads-rail__step", "google-ads-rail__step--#{status}", ("google-ads-rail__step--current" if step == current)] do %>
+    <% current_step = step == current %>
+    <%= tag.li class: class_names("google-ads-rail__step", "google-ads-rail__step--done": status == "done", "google-ads-rail__step--started": status == "started", "google-ads-rail__step--current": current_step) do %>
       <%= link_to (plan ? google_ads_plan_guide_step_path(plan, step.key) : google_ads_strategy_step_path(step.key)), class: "google-ads-rail__link", aria: {current: (step == current) ? "step" : nil} do %>
         <span class="google-ads-rail__mark"><% if marks[status] %><%= icon_tag(marks[status], class: "icon--xs") %><% else %><%= index + 1 %><% end %></span>
         <span><%= step.title %><span class="visually-hidden"> (<%= status %>)</span></span>

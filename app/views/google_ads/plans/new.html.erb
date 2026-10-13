@@ -1,3 +1,29 @@
 <% @page_title = "New plan" %>
+<% draft = @draft %>
 <%= render "layouts/shared/page_header", title: "New plan" %>
+
+<section class="panel panel--padded stack stack--sm google-ads-draft" aria-label="Fill with AI">
+  <div class="row row--between">
+    <h2 class="heading"><%= icon_tag "ai" %> Fill it in with AI</h2>
+    <span class="text-small text-muted">A first draft to work through, from the strategy</span>
+  </div>
+  <% if draft.working? %>
+    <p class="notice notice--info text-small" role="status" data-controller="refresh" data-refresh-interval-value="5"><%= icon_tag "refresh" %> The AI is drafting the plan<%= ": #{draft.about}" if draft.about.present? %>. A minute or two; the form below fills in when it's in.</p>
+  <% elsif GoogleAds::Guide::Fill.available? %>
+    <p class="text-small text-muted">The AI drafts the goal, what success looks like and when to stop, who it's for, the budget, when to decide and the setup, from everything answered in the strategy. Nothing is made until you save.</p>
+    <%= form_with url: draft_google_ads_plans_path, class: "cluster cluster--sm" do |form| %>
+      <%= form.text_field :about, value: draft.about, placeholder: "What it's for, if you know (optional): holiday displays for restaurants", class: "grow", aria: {label: "What the campaign is for"} %>
+      <button type="submit" class="btn btn--primary"><%= icon_tag "ai" %> <span><%= draft.ready? ? "Fill it in again" : "Fill with AI" %></span></button>
+    <% end %>
+  <% else %>
+    <p class="text-small text-muted"><%= GoogleAds::Guide::Fill.unavailable_reason %>. Or fill in the form yourself.</p>
+  <% end %>
+  <% if draft.error %>
+    <p class="notice notice--danger text-small" role="alert">The AI didn't finish: <%= draft.error %></p>
+  <% end %>
+  <% if GoogleAds::Guide::BRIEF_STEPS.none? { GoogleAds::Brief.current.step_done?(it.key) } %>
+    <p class="text-small text-muted">The strategy isn't answered yet, so the draft has less to go on: <%= link_to "answer the strategy first", google_ads_strategy_path, class: "link" %> for a better one.</p>
+  <% end %>
+</section>
+
 <%= render "google_ads/plans/form", plan: @plan %>

@@ -12,6 +12,9 @@ class GoogleAds::Guide::Prompt
     @plan = record if record.is_a?(GoogleAds::Plan)
   end
 
+  # Everything known so far (the brand brief, the strategy, the exclusion lists, and for a plan the plan), for another prompt to start from.
+  def known = context
+
   def to_s
     [intro, context, "## Your task", @step.task, "## How to answer", answer_rules, "```json\n#{JSON.pretty_generate(@step.answer_format)}\n```"].compact_blank.join("\n\n")
   end

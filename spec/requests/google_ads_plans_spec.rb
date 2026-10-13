@@ -4,6 +4,8 @@ require "rails_helper"
 require_relative "../support/google_ads_helpers"
 
 RSpec.describe "Google Ads plans", type: :request do
+  include ActiveJob::TestHelper
+
   let(:admin) { create(:user) }
 
   def api_headers(user) = {"Authorization" => "Bearer #{user.api_token!.token}", "Accept" => "application/json"}
@@ -23,6 +25,41 @@ RSpec.describe "Google Ads plans", type: :request do
     switch_plugin :google_ads, on: true
     fake_google_ads
     Rails.cache.clear
+  end
+
+  it "drafts a new plan with the install's AI, from the strategy, for the marketer to work through before it's made" do
+    sign_in_as admin
+    get new_google_ads_plan_path
+    expect(response.body).to include("Fill it in with AI", "answer the strategy first")
+    expect(response.body).not_to include("Fill with AI</span>")
+
+    switch_plugin :ai, on: true
+    Ai::Settings.update("provider" => "opencode", "api_key" => "zen-key")
+    GoogleAds::Brief.current.tap { it.assign_answers("business_name" => "Healing Earth Design", "lead_offer" => "Holiday displays for businesses") }.save!
+    asked = nil
+    allow(Ai).to receive(:structured) do |**options|
+      asked = options
+      {"name" => "Commercial: holiday displays", "goal" => "Two commercial leads a month", "success" => "One signed client by January; stop at $900 with no lead",
+       "audience" => "Restaurants and shops, not homeowners", "daily_budget" => 30, "decide_in_days" => 75, "locations" => "Kent County (presence)",
+       "schedule" => "Weekdays 8–6", "bidding" => "Maximize clicks, capped at $6"}
+    end
+
+    expect { post draft_google_ads_plans_path, params: {about: "holiday displays for restaurants"} }.to have_enqueued_job(GoogleAds::PlanDraftJob)
+    follow_redirect!
+    expect(response.body).to include("The AI is drafting the plan: holiday displays for restaurants")
+    perform_enqueued_jobs
+    expect(asked[:prompt]).to include("Healing Earth Design", "holiday displays for restaurants")
+    expect(asked[:schema][:required]).to include("goal", "daily_budget", "decide_in_days")
+
+    get new_google_ads_plan_path
+    expect(response.body).to include("Drafted by the AI", "Commercial: holiday displays", "One signed client by January", "Kent County (presence)", "Fill it in again")
+    expect(response.body).to include(%(value="#{(Date.current + 75).iso8601}"))
+    expect(GoogleAds::Plan.count).to eq(0)
+
+    post google_ads_plans_path, params: {plan: {name: "Commercial: holiday displays", goal: "Two commercial leads a month", daily_budget: 30}, template: "search_leads"}
+    expect(GoogleAds::Plan.last).to have_attributes(name: "Commercial: holiday displays")
+    get new_google_ads_plan_path
+    expect(response.body).not_to include("Drafted by the AI")
   end
 
   describe "the API" do

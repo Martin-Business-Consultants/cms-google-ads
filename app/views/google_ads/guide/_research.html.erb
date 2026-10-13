@@ -1,10 +1,28 @@
 <%# locals: (guide:) %>
 <% answer_path = guide.plan ? google_ads_plan_guide_step_answer_path(guide.plan, guide.step.key) : google_ads_strategy_step_answer_path(guide.step.key) %>
+<% fill_path = guide.plan ? google_ads_plan_guide_step_fill_path(guide.plan, guide.step.key) : google_ads_strategy_step_fill_path(guide.step.key) %>
+<% fill = guide.fill %>
 <section class="panel panel--padded stack stack--sm google-ads-research" id="research">
   <div class="row row--between">
-    <h3 class="heading">Research it with Claude</h3>
+    <h3 class="heading"><%= icon_tag "ai" %> Fill it in with AI</h3>
     <span class="text-small text-muted">Optional, and usually faster</span>
   </div>
+  <% if fill&.working? %>
+    <p class="notice notice--info text-small" role="status" data-controller="refresh" data-refresh-interval-value="5"><%= icon_tag "refresh" %> The AI is researching this step from everything answered so far. A minute or two; this page shows its answer when it's in.</p>
+  <% elsif GoogleAds::Guide::Fill.available? %>
+    <div class="row row--between">
+      <span class="text-small text-muted">The AI answers this step from everything answered so far, in the shape it needs. <%= guide.step.fields.any? ? "The form fills in for you to check" : "You'll see what it would change" %>; nothing is saved until you do.</span>
+      <%= button_to fill_path, class: "btn btn--primary btn--sm", form_class: "contents" do %><%= icon_tag "ai" %> <span><%= fill&.ready? ? "Fill it in again" : "Fill with AI" %></span><% end %>
+    </div>
+  <% else %>
+    <p class="text-small text-muted"><%= GoogleAds::Guide::Fill.unavailable_reason %>. Or research it with Claude, below.</p>
+  <% end %>
+  <% if fill&.error %>
+    <p class="notice notice--danger text-small" role="alert">The AI didn't finish: <%= fill.error %></p>
+  <% end %>
+
+  <%= tag.details class: "google-ads-research__claude", open: guide.pasted.present? do %>
+    <summary class="text-small link">Or research it with Claude and paste the reply</summary>
   <ol class="google-ads-research__steps">
     <li class="stack stack--xs">
       <div class="row row--between">
@@ -26,9 +44,10 @@
       <% end %>
     </li>
   </ol>
+  <% end %>
   <% if guide.answer&.notes %>
     <div class="notice notice--info stack stack--xs">
-      <strong>Claude's notes</strong>
+      <strong>Notes with the answer</strong>
       <p class="google-ads-text"><%= guide.answer.notes %></p>
     </div>
   <% end %>

@@ -9,9 +9,9 @@ class GoogleAds::Guide::Answer
   def initialize(step, record, text)
     @step = step
     @record = record
-    @data = text.is_a?(Hash) ? text.deep_stringify_keys : parse(text.to_s)
     expected = @step.answer_format.keys.map(&:to_s)
-    raise GoogleAds::Error, "That answer has none of the keys this step asks for (#{expected.join(", ")})" if (@data.keys & expected).empty?
+    @data = normalize(text.is_a?(Hash) ? text.deep_stringify_keys : parse(text.to_s), expected)
+    raise GoogleAds::Error, "That answer has none of the keys this step asks for (#{expected.join(", ")}). Fill it with AI, or ask Claude to answer again in the JSON shape the prompt gives" if (@data.keys & expected).empty?
   end
 
   # A field step's values, as the form takes them (lists one a line), and anything else Claude said.
@@ -62,6 +62,26 @@ class GoogleAds::Guide::Answer
   end
 
   private
+
+  # Keys as the step names them, whatever their case or spacing ("Not customers", "notCustomers"), or a
+  # field's label ("Who isn't a customer"); and an answer wrapped in one object ({"customers": {…}}) unwrapped.
+  def normalize(data, expected)
+    if (data.keys & expected).empty?
+      inner = data.values.select { it.is_a?(Hash) }
+      data = inner.first if inner.size == 1 && (simplified(inner.first).keys & expected).any?
+    end
+    simplified(data)
+  end
+
+  def simplified(data)
+    labels = @step.fields.to_h { [slug(it.label), it.key] }
+    data.to_h do |key, value|
+      name = slug(key.to_s.gsub(/([a-z])([A-Z])/, '\\1_\\2'))
+      [labels.fetch(name, name), value]
+    end
+  end
+
+  def slug(text) = text.to_s.downcase.gsub(/[^a-z0-9]+/, "_").delete_prefix("_").delete_suffix("_")
 
   def parse(text)
     json = text[/```(?:json)?\s*(\{.*?\})\s*```/m, 1] || text[/\{.*\}/m]

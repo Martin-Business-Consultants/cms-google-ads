@@ -2,21 +2,23 @@
 
 module GoogleAds
   # The guide, a step at a time: the strategy's steps (the brief) or a plan's.
-  # A step's form saves its answers; a pasted research answer is read into
-  # the form (or, for lists and ad groups, shown as changes) for review
-  # before anything is saved.
+  # A step's form saves its answers; a research answer, pasted from Claude or
+  # filled in by the install's AI (Guide::Fill), is read into the form (or,
+  # for lists and ad groups, shown as changes) for review before anything is
+  # saved.
   class GuideController < ApplicationController
     requires_capability "google_ads:read", only: :show
-    requires_capability "google_ads:plan", only: [:update, :answer, :apply, :done]
+    requires_capability "google_ads:plan", only: [:update, :answer, :fill, :apply, :done]
 
     # What a step's screen and its partials read.
-    View = Struct.new(:record, :plan, :brief, :step, :progress, :brief_progress, :prompt, :answer, :values, :pasted, :economics, :lists, :checks, keyword_init: true)
+    View = Struct.new(:record, :plan, :brief, :step, :progress, :brief_progress, :prompt, :answer, :values, :pasted, :economics, :lists, :checks, :fill, keyword_init: true)
 
     before_action :set_record_and_step
 
     def show
       return redirect_to(step_path(@progress.next_step)) unless params[:step]
 
+      read_fill
       prepare
     end
 
@@ -25,6 +27,7 @@ module GoogleAds
       @record.assign_answers(values)
       @record.exclusion_list_ids = Array(params[:exclusion_list_ids]).compact_blank.map(&:to_i) if @step.kind == :setup
       if @record.save
+        ai_fill.clear
         @record.mark_step!(@step.key) if params[:next] == "done"
         redirect_to (params[:next] ? step_path(following || @step) : step_path(@step)), notice: "Saved"
       else
@@ -49,8 +52,17 @@ module GoogleAds
       render :show, status: :unprocessable_content
     end
 
+    # The step's research prompt run by the install's AI, in the background; the step's screen shows the answer when it's in.
+    def fill
+      return redirect_to(step_path(@step), alert: GoogleAds::Guide::Fill.unavailable_reason) unless GoogleAds::Guide::Fill.available?
+
+      ai_fill.start(user: Current.user) unless ai_fill.working?
+      redirect_to step_path(@step, anchor: "research"), notice: "The AI is researching this step: a minute or two"
+    end
+
     def apply
       changes = GoogleAds::Guide::Answer.new(@step, @record, JSON.parse(params.require(:payload))).apply!
+      ai_fill.clear
       redirect_to step_path(@step), notice: "Applied: #{changes.size} change#{"s" unless changes.size == 1}"
     rescue GoogleAds::Error, JSON::ParserError, ActiveRecord::RecordInvalid => error
       redirect_to step_path(@step), alert: error.message
@@ -73,6 +85,20 @@ module GoogleAds
       @step = @progress.steps.find { it.key == params[:step] } or raise ActionController::RoutingError, "No step #{params[:step]}"
     end
 
+    def ai_fill = @ai_fill ||= GoogleAds::Guide::Fill.new(@step, @record)
+
+    # An answer the AI filled in, shown as a pasted one would be: the form filled (not saved), or the changes it would make.
+    def read_fill
+      return unless @step&.research? && ai_fill.ready?
+
+      @answer = GoogleAds::Guide::Answer.new(@step, @record, ai_fill.answer)
+      @values = @answer.values if @step.fields.any?
+      flash.now[:notice] = @values ? "Filled in by the AI: check it, change what's wrong, then save." : "Here's what the AI's answer would change."
+    rescue GoogleAds::Error => error
+      ai_fill.clear
+      flash.now[:alert] = error.message
+    end
+
     def prepare
       @brief_progress = @plan ? GoogleAds::Guide::Progress.new(@brief) : @progress
       @prompt = GoogleAds::Guide::Prompt.new(@step, @record, brief: @brief).to_s if @step.research?
@@ -80,7 +106,7 @@ module GoogleAds
       @lists = GoogleAds::ExclusionList.ordered.to_a if %i[exclusions setup].include?(@step.kind)
       @checks = GoogleAds::PlanChecks.new(@plan, live: GoogleAds::PlanLive.for(@plan)) if @plan && %i[landing_pages preflight].include?(@step.kind)
       @guide = View.new(record: @record, plan: @plan, brief: @brief, step: @step, progress: @progress, brief_progress: @brief_progress, prompt: @prompt,
-        answer: @answer, values: @values, pasted: @pasted, economics: @economics, lists: @lists, checks: @checks)
+        answer: @answer, values: @values, pasted: @pasted, economics: @economics, lists: @lists, checks: @checks, fill: (ai_fill if @step&.research?))
     end
 
     def following
@@ -88,8 +114,8 @@ module GoogleAds
       steps[steps.index(@step) + 1]
     end
 
-    def step_path(step)
-      @plan ? google_ads_plan_guide_step_path(@plan, step.key) : google_ads_strategy_step_path(step.key)
+    def step_path(step, **options)
+      @plan ? google_ads_plan_guide_step_path(@plan, step.key, **options) : google_ads_strategy_step_path(step.key, **options)
     end
     helper_method :step_path
   end

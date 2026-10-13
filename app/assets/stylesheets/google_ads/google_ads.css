@@ -306,6 +306,16 @@
     border-inline-start: 3px solid var(--accent-600);
   }
 
+  /* Plans › New: the AI's draft, above the form it fills. */
+  .google-ads-draft {
+    margin-block-end: var(--space-6);
+  }
+
+  /* Researching with Claude: the alternative to filling with AI, folded away until wanted. */
+  .google-ads-research__claude[open] > summary {
+    margin-block-end: var(--space-2);
+  }
+
   .google-ads-research__steps {
     display: flex;
     flex-direction: column;

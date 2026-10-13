@@ -2,10 +2,11 @@
 
 module GoogleAds
   # Campaign plans: the list, one plan with its checks and checklist, making
-  # and changing one, the Ads Editor download, and applying its negatives.
+  # (from scratch, or from a draft the AI wrote: draft) and changing one, the
+  # Ads Editor download, and applying its negatives.
   class PlansController < ApplicationController
     requires_capability "google_ads:read", only: [:index, :show, :export]
-    requires_capability "google_ads:plan", only: [:new, :create, :edit, :update, :destroy]
+    requires_capability "google_ads:plan", only: [:new, :create, :draft, :edit, :update, :destroy]
     requires_capability "google_ads:write", only: [:apply_negatives, :attach_exclusions]
 
     before_action :set_plan, only: [:show, :edit, :update, :destroy, :export, :apply_negatives, :attach_exclusions]
@@ -21,15 +22,28 @@ module GoogleAds
     end
 
     def new
-      @plan = GoogleAds::Plan.new(networks: "search", status: "planning")
+      @draft = GoogleAds::PlanDraft.for(Current.user)
+      @plan = GoogleAds::Plan.new({networks: "search", status: "planning"}.merge(@draft.ready? ? @draft.attributes : {}))
+      flash.now[:notice] = "Drafted by the AI from the strategy: work through it, change what's wrong, then make the plan." if @draft.ready?
+    end
+
+    # The AI drafts the new plan in the background; Plans › New shows it, unsaved, when it's in.
+    def draft
+      return redirect_to(new_google_ads_plan_path, alert: GoogleAds::Guide::Fill.unavailable_reason) unless GoogleAds::Guide::Fill.available?
+
+      draft = GoogleAds::PlanDraft.for(Current.user)
+      draft.start(params[:about]) unless draft.working?
+      redirect_to new_google_ads_plan_path, notice: "The AI is drafting the plan from the strategy: a minute or two"
     end
 
     def create
       @plan = GoogleAds::Plan.from_template(plan_params, template: params[:template])
       if @plan.save
+        GoogleAds::PlanDraft.for(Current.user).clear
         Event.record("google_ads.plan_created", plan_id: @plan.id)
         redirect_to google_ads_plan_guide_path(@plan), notice: "Plan made. The guide takes it from here, a step at a time."
       else
+        @draft = GoogleAds::PlanDraft.for(Current.user)
         render :new, status: :unprocessable_content
       end
     end

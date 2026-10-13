@@ -18,6 +18,7 @@ module GoogleAds
             get "strategy/:step", to: "guide#show", as: :strategy_step
             patch "strategy/:step", to: "guide#update"
             post "strategy/:step/answer", to: "guide#answer", as: :strategy_step_answer
+            post "strategy/:step/fill", to: "guide#fill", as: :strategy_step_fill
             post "strategy/:step/apply", to: "guide#apply", as: :strategy_step_apply
             post "strategy/:step/done", to: "guide#done", as: :strategy_step_done
             resources :exclusion_lists, except: :show do
@@ -27,9 +28,11 @@ module GoogleAds
             get "plans/:plan_id/guide/:step", to: "guide#show", as: :plan_guide_step
             patch "plans/:plan_id/guide/:step", to: "guide#update"
             post "plans/:plan_id/guide/:step/answer", to: "guide#answer", as: :plan_guide_step_answer
+            post "plans/:plan_id/guide/:step/fill", to: "guide#fill", as: :plan_guide_step_fill
             post "plans/:plan_id/guide/:step/apply", to: "guide#apply", as: :plan_guide_step_apply
             post "plans/:plan_id/guide/:step/done", to: "guide#done", as: :plan_guide_step_done
             resources :plans do
+              post :draft, on: :collection
               get :export, on: :member
               post :negatives, on: :member, action: :apply_negatives
               post :exclusions, on: :member, action: :attach_exclusions

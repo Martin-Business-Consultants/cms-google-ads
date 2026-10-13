@@ -42,7 +42,9 @@
           <strong class="google-ads-figure__value"><%= format.call(now) %></strong>
           <% if now && was && was.to_f.positive? %>
             <% change = (now.to_f - was.to_f) / was.to_f %>
-            <span class="google-ads-figure__change <%= "google-ads-figure__change--#{(change.positive? == up_is_good) ? "good" : "bad"}" unless change.zero? %>">
+            <% good = !change.zero? && change.positive? == up_is_good %>
+            <% bad = !change.zero? && change.positive? != up_is_good %>
+            <span class="<%= class_names("google-ads-figure__change", "google-ads-figure__change--good": good, "google-ads-figure__change--bad": bad) %>">
               <%= change.positive? ? "+" : "" %><%= number_to_percentage(change * 100, precision: 0) %> (was <%= format.call(was) %>)
             </span>
           <% else %>
