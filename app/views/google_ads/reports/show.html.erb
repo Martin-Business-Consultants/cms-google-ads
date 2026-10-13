@@ -1,0 +1,126 @@
+<% @page_title = "Google Ads" %>
+<% can_write = Current.user.can?("google_ads:write") %>
+<% currency = @settings.currency %>
+<% money = ->(value) { value.nil? ? "–" : number_to_currency(value, unit: (currency == "USD") ? "$" : "#{currency} ") } %>
+<% percent = ->(value) { value.nil? ? "–" : number_to_percentage(value * 100, precision: 1) } %>
+
+<% content_for :page_actions do %>
+  <div class="cluster cluster--sm">
+    <% GoogleAds::ReportsController::RANGES.each do |days| %>
+      <%# herb:key days %>
+      <%= link_to "#{days} days", google_ads_report_path(days: days), class: class_names("btn", "btn--primary": days == @days), aria: {current: (days == @days) ? "page" : nil} %>
+    <% end %>
+  </div>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Google Ads" %>
+
+<% if !@settings.ready? %>
+  <section class="panel panel--padded stack stack--sm">
+    <h2 class="heading">Not connected yet</h2>
+    <p class="text-muted">Add <%= @settings.missing.to_sentence %> in <%= link_to "Settings › Google Ads", settings_google_ads_path, class: "link" %>.</p>
+  </section>
+<% elsif @error %>
+  <section class="panel panel--padded stack stack--sm">
+    <h2 class="heading">Google Ads didn't answer</h2>
+    <p class="text-danger"><%= @error %></p>
+  </section>
+<% else %>
+  <% totals = @overview[:totals] %>
+  <% before = @overview[:totals_before] %>
+  <div class="stack stack--lg">
+    <p class="text-small text-muted"><%= @settings.customer_name || @settings.customer_id %> · <%= l(@range.first, format: :long) %> to <%= l(@range.last, format: :long) %>, beside the <%= @days %> days before</p>
+    <section class="google-ads-figures">
+      <% [["Spend", :cost, money, false], ["Clicks", :clicks, ->(v) { number_with_delimiter(v) }, true], ["Impressions", :impressions, ->(v) { number_with_delimiter(v) }, true],
+          ["CTR", :ctr, percent, true], ["Cost per click", :cpc, money, false], ["Conversions", :conversions, ->(v) { number_with_delimiter(v) }, true],
+          ["Cost per conversion", :cost_per_conversion, money, false]].each do |label, key, format, up_is_good| %>
+        <%# herb:key key %>
+        <% now = totals[key] %>
+        <% was = before[key] %>
+        <div class="panel panel--padded google-ads-figure">
+          <span class="google-ads-figure__label"><%= label %></span>
+          <strong class="google-ads-figure__value"><%= format.call(now) %></strong>
+          <% if now && was && was.to_f.positive? %>
+            <% change = (now.to_f - was.to_f) / was.to_f %>
+            <span class="google-ads-figure__change <%= "google-ads-figure__change--#{(change.positive? == up_is_good) ? "good" : "bad"}" unless change.zero? %>">
+              <%= change.positive? ? "+" : "" %><%= number_to_percentage(change * 100, precision: 0) %> (was <%= format.call(was) %>)
+            </span>
+          <% else %>
+            <span class="google-ads-figure__change">was <%= format.call(was) %></span>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+
+    <% peak = @daily.map { it[:cost] }.max.to_f %>
+    <% if peak.positive? %>
+      <section class="panel panel--padded stack stack--sm">
+        <h2 class="heading">Spend by day</h2>
+        <div class="google-ads-bars" role="img" aria-label="Spend by day">
+          <% @daily.each do |day| %>
+            <%# herb:key day[:date] %>
+            <span class="google-ads-bars__bar" style="--h: <%= ((day[:cost] / peak) * 100).round %>%" title="<%= day[:date] %>: <%= money.call(day[:cost]) %>, <%= day[:clicks] %> clicks, <%= day[:conversions] %> conversions"></span>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <section class="panel panel--scroll">
+      <table class="data-table">
+        <thead><tr><th>Campaign</th><th>Status</th><th>Budget a day</th><th class="data-table__num">Spend</th><th class="data-table__num">Clicks</th><th class="data-table__num">CTR</th><th class="data-table__num">CPC</th><th class="data-table__num">Conv.</th><th class="data-table__num">Per conv.</th></tr></thead>
+        <tbody>
+          <% if @campaigns.empty? %>
+            <tr><td colspan="9" class="data-table__empty">No campaign ran in this period.</td></tr>
+          <% end %>
+          <% @campaigns.each do |campaign| %>
+            <%# herb:key campaign[:id] %>
+            <tr>
+              <td><strong><%= campaign[:name] %></strong> <span class="text-small text-muted"><%= campaign[:channel].to_s.humanize %></span></td>
+              <td><%= status_tag(campaign[:status].to_s.humanize) %></td>
+              <td><%= money.call(campaign[:daily_budget]) %></td>
+              <td class="data-table__num"><%= money.call(campaign[:cost]) %></td>
+              <td class="data-table__num"><%= number_with_delimiter campaign[:clicks] %></td>
+              <td class="data-table__num"><%= percent.call(campaign[:ctr]) %></td>
+              <td class="data-table__num"><%= money.call(campaign[:cpc]) %></td>
+              <td class="data-table__num"><%= campaign[:conversions] %></td>
+              <td class="data-table__num"><%= money.call(campaign[:cost_per_conversion]) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel panel--scroll">
+      <div class="panel__header stack stack--xs">
+        <h2 class="heading">Search terms</h2>
+        <p class="text-small text-muted">What people typed before your ad showed. Exclude the ones that will never buy: it adds the words as a phrase-match negative on that campaign.</p>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Search term</th><th>Campaign · ad group</th><th class="data-table__num">Impr.</th><th class="data-table__num">Clicks</th><th class="data-table__num">Spend</th><th class="data-table__num">Conv.</th><th></th></tr></thead>
+        <tbody>
+          <% if @search_terms.empty? %>
+            <tr><td colspan="7" class="data-table__empty">No searches yet in this period.</td></tr>
+          <% end %>
+          <% @search_terms.each do |term| %>
+            <%# herb:key "#{term[:campaign_id]}-#{term[:ad_group_id]}-#{term[:search_term]}" %>
+            <tr>
+              <td><%= term[:search_term] %></td>
+              <td class="text-small text-muted"><%= term[:campaign] %> · <%= term[:ad_group] %></td>
+              <td class="data-table__num"><%= number_with_delimiter term[:impressions] %></td>
+              <td class="data-table__num"><%= number_with_delimiter term[:clicks] %></td>
+              <td class="data-table__num"><%= money.call(term[:cost]) %></td>
+              <td class="data-table__num"><%= term[:conversions] %></td>
+              <td class="data-table__num nowrap">
+                <% if term[:status].to_s.include?("EXCLUDED") %>
+                  <span class="text-small text-muted">Excluded</span>
+                <% elsif can_write %>
+                  <%= button_to "Exclude", google_ads_negative_keywords_path, params: {campaign_id: term[:campaign_id], keyword: term[:search_term], days: @days},
+                        class: "btn btn--sm", form_class: "contents", data: {turbo_confirm: "Stop showing ads in “#{term[:campaign]}” to searches containing “#{term[:search_term]}”?"} %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  </div>
+<% end %>

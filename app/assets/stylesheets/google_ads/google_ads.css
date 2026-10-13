@@ -1,0 +1,55 @@
+/* Google Ads (cms-google-ads): the figures across the top of its page and
+   the spend-by-day bars. Drawn with the admin's tokens (STYLE.md), so it
+   follows Settings › Branding and the dark theme. */
+@layer components {
+  .google-ads-figures {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+
+  .google-ads-figure {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .google-ads-figure__label {
+    color: var(--gray-600);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+  }
+
+  .google-ads-figure__value {
+    font-size: var(--text-xl, 1.25rem);
+    font-weight: var(--weight-semibold);
+  }
+
+  .google-ads-figure__change {
+    color: var(--gray-600);
+    font-size: var(--text-xs);
+  }
+
+  .google-ads-figure__change--good {
+    color: var(--green-600, var(--green-500));
+  }
+
+  .google-ads-figure__change--bad {
+    color: var(--red-600, var(--red-500));
+  }
+
+  .google-ads-bars {
+    align-items: end;
+    display: flex;
+    gap: 2px;
+    height: 6rem;
+  }
+
+  .google-ads-bars__bar {
+    background-color: var(--accent-600);
+    border-radius: 2px 2px 0 0;
+    flex: 1;
+    height: var(--h);
+    min-height: 1px;
+  }
+}

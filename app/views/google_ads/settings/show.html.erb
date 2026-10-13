@@ -1,0 +1,83 @@
+<% @page_title = "Google Ads" %>
+<% can_write = Current.user.can?("settings:write") %>
+
+<%= render "layouts/shared/page_header", title: "Google Ads" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "google_ads_settings_form", capability: "settings:write" %>
+<% end %>
+
+<%= form_with url: settings_google_ads_path, id: "google_ads_settings_form", method: :patch, scope: :google_ads do |form| %>
+  <%= tag.fieldset class: "stack stack--lg", disabled: !can_write do %>
+    <section class="panel panel--padded fields">
+      <div class="stack stack--xs">
+        <h2 class="heading">API access</h2>
+        <p class="text-muted">Google Ads needs two things of your own. A <strong>developer token</strong>, from the API Center of a Google Ads manager account (Tools › API Center; a new token works only with test accounts until Google approves Basic access). And an <strong>OAuth client</strong> from the Google Cloud console: a Web application whose authorised redirect URI is the one below, in a project with the Google Ads API enabled.</p>
+      </div>
+      <%= settings_field "Authorised redirect URI", hint: "Paste this into the OAuth client in the Google Cloud console." do %>
+        <code class="text-small"><%= settings_google_ads_callback_url %></code>
+      <% end %>
+      <div class="grid grid--2 fields-grid">
+        <%= settings_field "Client ID" do %>
+          <%= form.text_field :client_id, value: @settings.client_id, placeholder: "….apps.googleusercontent.com", autocomplete: "off" %>
+        <% end %>
+        <%= settings_field "Client secret", hint: (@settings.client_secret ? "Saved. Leave blank to keep it." : "Never shown again once saved.") do %>
+          <%= form.password_field :client_secret, value: nil, autocomplete: "new-password", data: {"1p-ignore": true} %>
+        <% end %>
+        <%= settings_field "Developer token", hint: (@settings.developer_token ? "Saved. Leave blank to keep it." : "Never shown again once saved.") do %>
+          <%= form.password_field :developer_token, value: nil, autocomplete: "new-password", data: {"1p-ignore": true} %>
+        <% end %>
+        <%= settings_field "API version", hint: "Google retires a version about a year after it ships." do %>
+          <%= form.text_field :api_version, value: @settings.api_version, placeholder: GoogleAds::API_VERSION, autocomplete: "off" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="panel panel--padded fields">
+      <div class="stack stack--xs">
+        <h2 class="heading">Ad account</h2>
+        <p class="text-muted">The account to read. When it's managed from a manager account, put the manager's id below too.</p>
+      </div>
+      <div class="grid grid--2 fields-grid">
+        <%= settings_field "Account", hint: (@settings.accounts.any? ? nil : "Connect to choose from a list, or type the customer ID (123-456-7890).") do %>
+          <% if @settings.accounts.any? %>
+            <%= form.select :customer_id, [["Choose…", ""]] + @settings.accounts.map { [it[2] ? "#{it[0]} · manager" : it[0], it[1]] }, selected: @settings.customer_id %>
+          <% else %>
+            <%= form.text_field :customer_id, value: @settings.customer_id, placeholder: "123-456-7890", autocomplete: "off" %>
+          <% end %>
+        <% end %>
+        <%= settings_field "Manager account ID", hint: "Only when the account sits under a manager (MCC) account." do %>
+          <%= form.text_field :login_customer_id, value: @settings.login_customer_id, placeholder: "Optional", autocomplete: "off" %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+<% end %>
+
+<section class="panel panel--padded stack stack--sm">
+  <div class="row row--between">
+    <h2 class="heading">Connection</h2>
+    <% if @settings.connected? %>
+      <span class="text-small text-muted"><%= status_tag "active" %> <%= @settings.email || "Connected" %><%= ", #{time_ago_in_words(@settings.connected_at)} ago" if @settings.connected_at %></span>
+    <% else %>
+      <span class="text-small text-muted"><%= status_tag "off" %> Not connected</span>
+    <% end %>
+  </div>
+  <% if @settings.ready? %>
+    <p class="text-small">Reading <strong><%= @settings.customer_name || @settings.customer_id %></strong>. <%= link_to "See the figures", google_ads_report_path, class: "link" %></p>
+  <% elsif @settings.missing.any? %>
+    <p class="text-small text-muted">Still needed: <%= @settings.missing.to_sentence %>.</p>
+  <% end %>
+  <% if can_write %>
+    <div class="cluster cluster--sm">
+      <% if @settings.client? %>
+        <%= link_to (@settings.connected? ? "Connect again" : "Connect Google Ads"), new_settings_google_ads_connection_path, class: class_names("btn", "btn--primary": !@settings.connected?), data: {turbo: false} %>
+      <% else %>
+        <span class="text-small text-muted">Save the client ID and secret to connect.</span>
+      <% end %>
+      <% if @settings.connected? %>
+        <%= button_to "Disconnect", settings_google_ads_connection_path, method: :delete, class: "btn btn--plain", form_class: "contents",
+              data: {turbo_confirm: "Forget the Google Ads sign-in?"} %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
